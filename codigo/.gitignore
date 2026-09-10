@@ -1,0 +1,9 @@
+venv/
+__pycache__/
+outputs/uamtr_run/melspec_cache/
+outputs/run_v2/
+outputs/experiments/
+outputs/cross_site/
+outputs/mtd_synth/
+test/
+train/

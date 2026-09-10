@@ -1,0 +1,20 @@
+# --------------------------------------------------------------------------
+# IMPORTANTE: esta línea le dice a pip que busque también en el índice de
+# PyTorch (además de PyPI), para instalar la build de torch con soporte CUDA
+# en vez de la versión CPU-only por defecto.
+#
+# cu130 = CUDA 13.0, la versión "estable" de PyTorch desde la release 2.11
+# (marzo 2026). Si tu `nvidia-smi` muestra una CUDA Version más vieja
+# (ej. 12.x), cambiá "cu130" por "cu124"; si es 11.8, usá "cu118".
+# --------------------------------------------------------------------------
+--extra-index-url https://download.pytorch.org/whl/cu130
+ 
+torch>=2.2
+librosa>=0.10
+soundfile>=0.12
+scikit-learn>=1.3
+pandas>=2.0
+numpy>=1.24
+tqdm>=4.65
+matplotlib>=3.7
+ 

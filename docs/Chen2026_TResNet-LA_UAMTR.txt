@@ -1,0 +1,2024 @@
+A robust deep learning model for underwater acoustic multi-target 
+recognition under non-target interference conditions
+Lu Chen
+ , Xinwei Luo *
+ , Hanlu Zhou
+ , Qifan Shen
+ , Long Chen
+ , Chuanming Huan
+Key Laboratory of Underwater Acoustic Signal Processing (Southeast University), Ministry of Education, Nanjing 210096, China
+ARTICLE INFO
+Keywords:
+UAMTR
+Non-target interference
+TIR
+Channel attention mechanism
+Deep learning
+ABSTRACT
+Recognizing multiple underwater acoustic targets from mixed ship-radiated noise is challenging, particularly 
+under non-target interference conditions, where complex interference from multiple vessels is common in real- 
+world scenarios. However, most existing studies focus on single-target recognition and have overlooked the task 
+of recognizing both the types and numbers of targets from such complex mixed signals. To simulate real and ideal 
+situations, this paper first constructs three underwater acoustic multi-target datasets (MTDs) with different 
+target-to-interference ratio (TIR) ranges based on the ShipsEar dataset. In addition, this study proposes two novel 
+dataset resampling strategies that effectively improve the dataset balance level. Furthermore, this paper in-
+troduces a deep learning model based on ResNet and channel attention mechanism to perform underwater 
+acoustic multi-target recognition (UAMTR) under non-target interference conditions. The channel attention 
+mechanism is effective in filtering channel information within feature maps, amplifying informative features 
+while reducing noise interference. Experimental results demonstrate that the channel attention module could 
+improve global recognition accuracy by up to 4 percentage points. The proposed method achieves a global 
+recognition accuracy of 91.21% on the MTD where the energy of each target and non-target signal is equal.
+1. Introduction
+Passive underwater acoustic target recognition based on ship- 
+radiated noise finds broad applications in maritime security, marine 
+environmental conservation, as well as marine resource exploration and 
+management (Neupane & Seok, 2020). During passive underwater 
+acoustic signal acquisition, multiple vessels often appear simultaneously 
+in the monitoring area. As a result, underwater acoustic signals contain 
+multiple target signals due to overlapping transmissions, along with 
+potential interference from non-target sources. In this paper, target 
+signals refer to the signals from vessels of interest, while non-target 
+interference signals are those from vessels of no interest. To simulate 
+realistic acoustic environments, we create mixed signals by combining 
+target signals with non-target interference at varying target-to- 
+interference ratios (TIRs). TIR represents the ratio of target signal en-
+ergy to interference energy for single-target cases and the energy of each 
+target relative to interference energy in multi-target scenarios. These 
+mixed signals reflect complex and overlapping acoustic conditions 
+commonly encountered in real-world underwater scenarios. The 
+interference from non-target signals presents a significant challenge for 
+underwater acoustic target recognition.
+One major challenge of underwater acoustic multi-target recognition 
+(UAMTR) under non-target interference conditions lies in the fact that 
+such interference signals can diminish or even mask the crucial features 
+of target signals. Additionally, non-target interference introduces addi-
+tional features, further complicating feature extraction and recognition 
+of underwater acoustic targets. Under these interference scenarios, 
+conventional signal processing techniques face difficulties in effectively 
+separating targets from non-targets within mixed signals. Consequently, 
+accurately recognizing both the type and quantity of targets becomes 
+even more difficult.
+With the advancement of deep learning (DL) technologies, DL-based 
+underwater acoustic target recognition methods have gained wide-
+spread adoption (Aslam et al., 2024; S. Feng et al., 2024; Khishe, Jav-
+danfar, et al., 2023). DL models automatically extract target features to 
+accomplish tasks such as underwater acoustic target recognition and 
+detection (Bianco et al., 2019; Tang et al., 2025). This end-to-end 
+strategy avoids complex feature engineering and serves as an effective 
+* Corresponding author.
+E-mail addresses: 230228256@seu.edu.cn (L. Chen), luoxinwei@seu.edu.cn (X. Luo), 230218633@seu.edu.cn (H. Zhou), 230239392@seu.edu.cn (Q. Shen), 
+230248097@seu.edu.cn (L. Chen), 230249577@seu.edu.cn (C. Huan). 
+Contents lists available at ScienceDirect
+Expert Systems With Applications
+journal homepage: www.elsevier.com/locate/eswa
+https://doi.org/10.1016/j.eswa.2025.129122
+Received 13 May 2025; Received in revised form 10 July 2025; Accepted 19 July 2025  
+Expert Systems With Applications 296 (2026) 129122 
+Available online 24 July 2025 
+0957-4174/© 2025 Elsevier Ltd. All rights are reserved, including those for text and data mining, AI training, and similar technologies. 
+
+solution for addressing the challenge of UAMTR under non-target 
+interference conditions. This study constructed a DL model combining 
+ResNet (He et al., 2016) and the channel attention mechanism (Hu et al., 
+2018) to directly recognize the type and quantity of targets from mixed 
+underwater acoustic signals containing interference. The channel 
+attention mechanism enhances information selection by weighting 
+feature map channels, thereby aiding in the suppression of non-target 
+interference.
+Another major challenge in advancing UAMTR under interference 
+conditions is the absence of dedicated benchmark datasets. To address 
+this issue, this study developed three underwater acoustic multi-target 
+datasets (MTDs) with different target-to-interference ratio (TIR) 
+ranges: SE_raw, SE_norm, and SE_en0. These MTDs were created by 
+mixing raw, maximum-normalized, and energy-normalized signals 
+derived from the multi-classification dataset ShipsEar (Santos-Domí-
+nguez et al., 2016). Specifically, SE_raw and SE_norm retain realistic TIR 
+distributions to emulate practical scenarios, whereas SE_en0 establishes 
+balanced energy conditions to access model performance under ideal 
+settings. Section 3.1 provides a detailed description of the MTD con-
+struction process. This work utilizes these MTDs to systematically 
+investigate the impact of varying non-target interference levels and 
+mixed target counts on target recognition accuracy in Section 5.
+Furthermore, this study analyzes the balance levels and mixed-signal 
+TIRs of the MTDs to evaluate their properties and validity. Existing 
+evaluation frameworks (Charte et al., 2015) primarily focus on the 
+balance among target classes but overlook the inter-class balance within 
+mixed signals. To bridge this gap, this research proposes two novel 
+sample-based balance metrics for MTD assessment. The findings reveal 
+that the current MTDs suffer from notable class imbalance due to limited 
+data samples in ShipsEar. Such imbalance negatively impacts target 
+recognition accuracy. To mitigate this issue, we introduce two dataset 
+resampling strategies to enhance the dataset balance. Experimental re-
+sults verify that these resampling approaches improve target recognition 
+performance.
+This study aims to recognize the types and quantity of targets within 
+mixed signals containing non-target interference. Based on multi-label 
+classification principles, the approaches to address this problem 
+include two main strategies: problem transformation methods and al-
+gorithm adaptation techniques (M.-L. Zhang & Zhou, 2014).
+Problem transformation methods handle multi-label classification by 
+converting it into multi-class or multiple binary classification tasks. The 
+multi-classification strategy assigns each label to a distinct class but fails 
+to capture inter-label dependencies across samples. The binary classifi-
+cation approach involves building separate classifiers for each target 
+while preserving label correlations through association-based classifiers 
+(Duan et al., 2024). Algorithm adaptation methods, on the other hand, 
+modify classifiers to predict multiple target categories simultaneously. 
+These methods are typically grounded in statistical learning models 
+(Law & Ghosh, 2022; H. Liu et al., 2016; Wu et al., 2020), such as K- 
+Nearest Neighbors (KNN), Decision Trees (DT), and Support Vector 
+Machines (SVM).
+However, these traditional methods often rely on hand-crafted fea-
+tures and are limited in their ability to model complex, non-linear re-
+lationships in high-dimensional data. Their performance tends to 
+degrade under conditions with overlapping signals or strong non-target 
+interference, which are common in real-world underwater acoustic 
+scenarios. Moreover, they are not inherently designed for end-to-end 
+training or large-scale data integration.
+To address these limitations, our work reformulates the task of 
+UAMTR under non-target interference conditions into a multi-label bi-
+nary classification problem (M.-L. Zhang & Zhou, 2014), where each 
+sample can be associated with multiple target classes simultaneously, 
+and each class is treated as a separate binary decision. This trans-
+formation captures target label relationships and facilitates the design of 
+an end-to-end DL-based recognition model. The length of the label 
+vector for each sample matches the total number of target classes L in the 
+dataset. Each position in the vector corresponds to a specific target class. 
+A value of 1 indicates the presence of that class in the sample, while a 
+value of 0 indicates its absence. However, multi-label binary classifica-
+tion tasks often suffer from class imbalance, which may lead the model 
+to ignore underrepresented classes. We address this issue through two 
+novel resampling strategies, as detailed in Section 3.2. Additionally, we 
+integrate a channel attention mechanism that enables the model to focus 
+on class-relevant features while suppressing interference, thus 
+improving robustness and accuracy in challenging acoustic 
+environments.
+A schematic of the DL-based UAMTR workflow is represented in 
+Fig. 1. The main contributions of this paper are as follows: 
+(1) A robust DL model based on ResNet and channel attention 
+mechanism is proposed to solve the UAMTR problem under non- 
+target interference conditions.
+(2) The channel attention mechanism is specifically integrated to 
+enhance feature extraction and reduce non-target interference 
+effects on recognition accuracy.
+(3) Three underwater acoustic MTDs with varying TIRs are con-
+structed to systematically evaluate the effects of interference in-
+tensity and the number of mixed targets on recognition 
+performance.
+(4) Novel evaluation metrics are introduced to verify the rationality 
+and effectiveness of the constructed MTDs.
+(5) Two innovative dataset resampling techniques are introduced to 
+optimize the dataset balance level and further enhance recogni-
+tion performance.
+The remainder of this paper is structured as follows: Section 2 re-
+views related work; Section 3 details the methodology for constructing 
+MTDs, examines their characteristics, and introduces two novel dataset 
+resampling strategies; Section 4 describes the UAMTR model; Section 5
+outlines the experimental setup and discusses the recognition results; 
+and Section 6 concludes the paper.
+2. Related work
+2.1. Dl-based underwater acoustic target recognition
+The rapid advancement of machine learning and the constraints of 
+traditional signal processing techniques in underwater acoustic envi-
+ronments have led to increasing interest in leveraging machine learning 
+approaches for underwater acoustic target recognition. DL methods are 
+highly effective in extracting deep feature representations from under-
+water acoustic signals and predicting the labels of unseen samples based 
+on learned patterns. DL-based underwater acoustic target recognition 
+primarily focuses on feature extraction and algorithm development.
+Before the advent of deep learning models in underwater acoustic 
+target recognition, traditional signal processing methods had played a 
+fundamental role in this field for decades. Common techniques include 
+Faster Fourier Transform (FFT), Short-Time Fourier Transform (STFT), 
+and Wavelet Transform for time–frequency analysis, which are widely 
+used to reveal the spectral characteristics of underwater signals (Lin 
+et al., 2024; Xie et al., 2022). Cepstral analysis methods, such as Mel- 
+frequency cepstral coefficients (MFCC) (Davis & Mermelstein, 1980; 
+Ke et al., 2018) and Gammatone frequency cepstral coefficients (GFCC) 
+(Lian et al., 2017), are also frequently adopted to capture spectral en-
+velope features. In addition, statistical feature extraction approach-
+es—such as zero-crossing rate, energy, spectral centroid, skewness, and 
+entropy—have been applied to characterize signal properties (Jiang 
+et al., 2021). Advanced techniques such as Empirical Mode Decompo-
+sition (EMD) and Cyclostationary Analysis (CTAS) have also been 
+explored for their capability to extract nonlinear and periodic features 
+from underwater acoustic signals under noisy conditions (Filho et al., 
+2022; Rajan et al., 2016). Despite their effectiveness in some scenarios, 
+L. Chen et al.                                                                                                                                                                                                                                    Expert Systems With Applications 296 (2026) 129122 
+2 
+
+these traditional methods heavily rely on manual feature engineering 
+and expert knowledge, and they often struggle to effectively handle 
+highly complex, non-stationary, or overlapping acoustic signals in 
+challenging underwater environments.
+DL-based underwater acoustic target recognition typically converts 
+time-domain signals into spectral representations. This process assists in 
+noise suppression, enhances model robustness, and reduces computa-
+tional costs. The widely employed spectral features include low- 
+frequency analysis and recording (LOFAR) spectrogram (Aghdam 
+et al., 2023; P. Wang & Peng, 2020), detection of envelope modulation 
+on noise (DEMON) spectrum (Xie, Zhang, et al., 2024), Mel-frequency 
+spectrogram (F. Liu et al., 2021), MFCC (Alouani et al., 2022; Khishe 
+et al., 2021; Ma et al., 2022), GFCC (H. Feng et al., 2024), and wavelet 
+transforms (Qiao et al., 2021) features. Additionally, numerous studies 
+have explored various features of underwater acoustic signals to 
+improve target recognition (Chu et al., 2025; Yang et al., 2024). For 
+instance, Jia et al. (2022) introduced a deep wavelet autoencoder for 
+underwater acoustic feature extraction and target recognition. Experi-
+mental results show that the proposed method has better recognition 
+results than baselines. Barros & Ebecken (2022) employed CTAS to 
+classify vessels based on the second-order cyclostationary properties of 
+ship-radiated noise (Fırat & Akgül, 2018). CTAS features exhibit high 
+noise resistance, preserving spectral correlations even under low signal- 
+to-noise ratio conditions. To better represent underwater acoustic tar-
+gets and integrate complementary features, Hong et al. (2021) fused 
+Mel-frequency spectrogram, MFCC, and CCTZ (Chroma, Contrast, Ton-
+netz, and Zero-cross) features for target recognition. Jiang et al. (2021)
+extracted features such as zero-cross rate, MFCC, centroid, skewness, 
+entropy, and sharpness to characterize acoustic signals. Experimental 
+findings confirmed the effectiveness of these interpretable features. X. 
+Wang et al. (2022) proposed a self-supervised acoustic representation 
+learning method using an acoustic-embedding memory unit-modified 
+space autoencoder (ASAE). This approach achieved higher recognition 
+accuracy and robustness compared to traditional feature-based 
+methods. For signals with low signal-to-noise ratios, researchers typi-
+cally employ denoising and signal enhancement techniques to improve 
+target recognition performance (Li et al., 2024).
+Multi-Layer Perception (MLP) neural networks (Khishe & Mosavi, 
+2020), Convolutional Neural Networks (CNNs) (Barros & Ebecken, 
+2022; Chen et al., 2021; Hong et al., 2021; Khishe, Mohammadi, et al., 
+2023; Maryam et al., 2022; Xie, Ren, et al., 2024), Recurrent Neural 
+Networks (RNNs) (Chen et al., 2022), and attention mechanisms (S. 
+Feng & Zhu, 2022; J. Wang et al., 2025; Xu et al., 2025) are widely 
+utilized DL models for underwater acoustic signal processing. Alouani 
+et al. (2022) employed a ConvLSTM model (Shi et al., 2015), which 
+integrates CNN and LSTM, to capture spatiotemporal features for target 
+recognition. Jin & Zeng (2023) combined CNN with attention mecha-
+nisms to enhance underwater acoustic target recognition accuracy. F. 
+Liu et al. (2021) applied the SpecAugment method (Park et al., 2019) for 
+data augmentation to address data sparsity issues and applied a con-
+volutional recurrent neural network (CRNN) for target recognition. To 
+tackle the data imbalance problem, Ma et al. (2022) proposed a trigo-
+nometric cos(x) weighted cross-entropy loss function (CFWCEL) derived 
+from the predicted probability of each sample. CFWCEL adjusts the 
+conventional cross-entropy loss by incorporating a factor that acceler-
+ates the reduction of loss for negative instances while slowing it for 
+positive instances, thereby improving convergence under imbalanced 
+data conditions. They further utilized a multi-scale residual convolu-
+tional neural network with an embedded attention mechanism (MR- 
+CNN-A) for underwater acoustic target recognition, where the attention 
+module aids in noise suppression.
+Most existing studies on underwater acoustic target recognition 
+concentrate on single-target scenarios, where each acoustic sample 
+contains a single signal from only one individual source. However, real 
+environments typically present more complex challenges, with over-
+lapping acoustic signatures from multiple targets frequently occurring in 
+data acquisition. Despite its practical significance, research on UAMTR 
+remains underdeveloped relative to single-target methods. Sun & Wang 
+(2022) proposed a CNN-based UAMTR framework utilizing single- 
+channel signals, formulating the recognition task as a dual classifica-
+tion scheme: they transformed cases involving either single same-class 
+targets or multiple same-class targets into multi-label binary and 
+multi-label multi-value classification problems, enabling end-to-end 
+processing through a DL framework. X. Wang et al. (2023) employed a 
+hierarchical recognition strategy, implementing a two-stage recognition 
+process that first discriminates target signals from non-target interfer-
+ence before proceeding to target classification. M. Zhu et al. (2023)
+further contributed to the field by developing an innovative hybrid 
+model integrating DesNet, LSTM, and attention mechanism, specifically 
+designed for dual-class mixed signal recognition.
+Acoustic signals generally consist of both target signals and non- 
+target interference components due to the inherent complexity of 
+Fig. 1. Overview of DL-based UAMTR Under Interference.
+L. Chen et al.                                                                                                                                                                                                                                    Expert Systems With Applications 296 (2026) 129122 
+3 
+
+marine environments. Existing methods primarily emphasize feature 
+extraction and target recognition while largely neglecting the crucial 
+issue of non-target interference suppression. This gap represents a sig-
+nificant limitation in current research, as non-target interference signals 
+can severely degrade recognition accuracy and system reliability in real- 
+world applications.
+2.2. Multi-label classification methods
+This study tackled the UAMTR task using DL-based multi-label 
+classification solutions. Approaches for multi-label classification are 
+generally classified into two categories: problem transformation and 
+algorithm adaptation (Sorower, 2010; M.-L. Zhang & Zhou, 2014).
+Problem transformation methods in multi-label classification refor-
+mulate tasks into multi-class or multiple binary classification problems 
+using various label encodings (Clare & King, 2001). However, directly 
+transforming a multi-label task into these forms overlooks label de-
+pendencies. While these methods are straightforward and computa-
+tionally efficient, they may not achieve optimal effectiveness. Second- 
+order strategies address multi-label tasks by incorporating pairwise re-
+lationships between labels, such as ranking relevant versus irrelevant 
+labels (Elisseeff & Weston, 2001; Fürnkranz et al., 2008) or modeling 
+interactions between label pairs (Guo & Schuurmans, 2011; S. Zhu et al., 
+2005). These approaches leverage label dependencies to some extent. 
+However, in certain practical scenarios, label dependencies can exceed 
+the limitations of second-order assumptions. In contrast, higher-order 
+strategies tackle multi-label tasks by capturing higher-order relation-
+ships between labels (Cheng & Hüllermeier, 2009; Ji et al., 2008; Read 
+et al., 2011). These methods provide more powerful correlation 
+modeling than first- and second-order approaches, but often come with 
+higher computational demands and reduced scalability.
+Algorithmic adaptive methods customize models for multi-label 
+learning tasks. Representative approaches include Multi-Label k-near-
+est Neighbor (ML_KNN) (H. Liu et al., 2016), derived from the k-nearest 
+Neighbor algorithm; Multi-Label Decision Tree (ML-DT) (Law & Ghosh, 
+2022), based on decision trees; Ranking Support Vector Machine (Rank- 
+SVM) (Wu et al., 2020), build on SVM; and Collective Multi-label Clas-
+sifier (CML) (Borchani et al., 2013; Gil-Begue et al., 2021).
+ML-KNN predicts labels for new instances based on nearby samples 
+in the feature space. It is straightforward to implement but becomes 
+computationally intensive for large-scale datasets. Additionally, it is 
+vulnerable to the curse of dimensionality in high-dimensional feature 
+spaces, which can result in performance deterioration.
+ML-DT provides strong interpretability but tends to overfit on high- 
+dimensional datasets. Rank-SVM applies the maximum margin principle 
+of SVM to rank labels, addressing multi-label classification tasks. It is 
+well-suited for problems involving intricate label dependencies but de-
+mands precise ranking and careful management of computational cost 
+and parameter tuning.
+The CML method employs a maximum entropy model to capture 
+sample-label associations while accounting for label dependencies. This 
+method enhances prediction accuracy but may lead to increased model 
+complexity due to excessive constraints, potentially impacting general-
+ization performance.
+The existence of non-target interference greatly increases the 
+complexity of addressing UAMTR. An effective solution must consider 
+the dependencies among various target labels and efficiently extract 
+meaningful target features from intricate acoustic patterns. This study 
+adopts a problem-transformation strategy to tackle these challenges. The 
+proposed approach reformulates the recognition task as a multi-label 
+binary classification problem (Ridnik, Ben-Baruch, et al., 2021). This 
+transformation enables the DL model to predict both the types and 
+quantities of targets within the acoustic signals.
+3. Underwater acoustic MTDs with non-target interference
+3.1. Construction of MTDs
+Due to the high cost associated with underwater acoustic signal 
+acquisition and the lack of existing MTDs in this domain, this study 
+employs the ShipsEar (Santos-Domínguez et al., 2016) dataset to 
+develop interfered underwater acoustic MTDs for validating the effec-
+tiveness and feasibility of the proposed method. The ShipsEar dataset 
+used in our study is collected from real underwater environments and 
+has been widely adopted in underwater acoustic target recognition 
+research (Fu et al., 2025; S.-Y. Jin et al., 2025). Therefore, it provides a 
+certain degree of realism and representativeness. Furthermore, the 
+ShipsEar dataset contains signals with varying intensities, which reflect 
+not only the differences in the distances between targets and hydro-
+phones but also the intrinsic acoustic characteristics of different target 
+types. In constructing the synthetic mixtures, we preserved these in-
+tensity differences between signals, allowing the resulting mixtures to 
+reflect realistic scenarios where signals with different strengths may 
+coexist.
+We selected three distinct classes of signals from the ShipsEar dataset 
+as recognition targets and one class as non-target interference: passenger 
+ferries (PF), motorboats (MB), and ro-ro vessels (RV), with Class A 
+representing non-target interference (NTInf). All chosen signals were 
+downsampled to 32 kHz and segmented into 5-second segments. Algo-
+rithm 1 and Fig. 1a illustrated the procedure for constructing interfered 
+underwater acoustic MTDs using three target signal classes and one non- 
+target interference signal class. The waveform and Mel-frequency 
+spectrogram of signals before and after mixing are presented in Ap-
+pendix A.
+This study constructs MTDs by mixing signals based on the raw, 
+maximum-normalized, and energy-normalized forms to examine the 
+impact of different TIR ranges on recognition performance. This process 
+produces three MTDs with varying TIR ranges: SE_raw, SE_norm, and 
+SE_en0. Where SE_raw and SE_norm preserve the intensity disparities 
+inherent in real underwater acoustic signals, thereby maintaining the 
+variability typically observed in practical scenarios. In contrast, SE_en0 
+is an ideal dataset in which all targets in mixed signals have equal en-
+ergy. This setting is employed to evaluate the upper-bound performance 
+of the proposed method under controlled conditions.
+Algorithm 1. Construct interfered MTDs
+INPUT:
+PF(passenger ferries),
+MB(motorboats),
+RV(ro  rovessels),
+NTInf (non-target interference),
+ND (noise data),
+k (number of mixed signals)
+OUTPUT:
+D (Constructed MTD)
+1. D=[]
+2. combinations =[(PF, MB),(PF, RV),(MB, RV),(PF,MB,RV)]
+3. FOR each group in combinations
+DO
+a. count = 0
+b. WHILE count < k
+DO
+i. selected_signal = RandomSelect (group, 1)
+ii. interference = RandomSelect (NTInf, 1)
+iii. interfered_signal = Mix ([selected_signal, interference])
+iv. D ← Append (D, interfered_signal)
+v. count = count + 1
+4. D← Append (D, PF, MB, RV, NTInf, ND)
+5. RETURN D
+6. FUNCTION RandomSelect (data, k)
+a. indices ← Randomly choose k unique indices from 1 to len(data)
+b. RETURN data[indices]
+7. FUNCTION Append (list, element)
+a. list ← list + [element]
+(continued on next page)
+L. Chen et al.                                                                                                                                                                                                                                    Expert Systems With Applications 296 (2026) 129122 
+4 
+
+(continued)
+Algorithm 1. Construct interfered MTDs
+b. RETURN list
+8. FUNCTION Mix (list)
+a. mixed ← sum(list) / len(list)
+b. RETURN mixed
+The constructed MTDs consist of signals with different target configu-
+rations: three classes containing one target, three containing two targets, 
+one containing three targets, and one without any targets. The class 
+without targets originates from NTInf and the background noise data 
+(ND) in ShipsEar. These samples are incorporated into the dataset to 
+improve the interference learning capability of the recognition model 
+Fig. 2.
+Table 1 displays the TIR ranges and signal labels for different classes 
+within the SE_raw and SE_norm MTDs, whereas the SE_en0 MTD main-
+tains a fixed 0 dB for all mixed signals. As shown in Table 1, the SE_raw 
+MTD features TIR values ranging from   47 dB to 45 dB, while the 
+SE_norm MTD shows a narrower range between   31 dB and 21 dB. 
+Fig. 3 visualizes these TIR distributions across MTDs. The mixed target 
+MTDs generally exhibit TIR distributions that approximate a normal 
+distribution pattern.
+Unlike single-target recognition, each sample in the MTDs is asso-
+ciated with a set of labels. The length of this label vector corresponds to 
+the number of targets included in the MTD, with each position repre-
+senting a specific target. If a signal contains a target, the corresponding 
+label position is assigned a value of 1; otherwise, it remains 0. The signal 
+labels for the MTDs are presented in the last column of Table 1.
+This study performed a comprehensive evaluation of MTDs, 
+extending beyond the analysis of their TIRs by incorporating various 
+metrics to assess dataset characteristics. Label Cardinality (M.-L. Zhang 
+& Zhou, 2014) was utilized to quantify the multi-labeled nature of 
+MTDs. In addition, this study employed MeanIR (Charte & Rivera, 
+2013), CVIR (Charte & Rivera, 2013), MeanImR (M.-L. Zhang et al., 
+2022), and CVImR (B. Liu et al., 2022) to evaluate target balance levels. 
+The mathematical definitions for these metrics are provided in Equa-
+tions (1) to (7). These target-based metrics apply to three categories: PF, 
+MB, and RV, with the target count determined by their occurrence fre-
+quency in the MTD.
+Label Cardinality measures the average number of labels per sample 
+in the MTD, reflecting the average number of targets in each signal 
+within the underwater acoustic dataset. 
+LCard(D)= 1
+N
+∑N
+i=1
+|Yi| (1) 
+where N is the total number of samples and |Yi| is the number of labels 1 
+in each sample.
+MeanIR represents the average of all class IRperLabels (Charte & 
+Rivera, 2013). IRperLabel is the ratio of the number of targets of the 
+largest class to that of the current targets class. Higher values indicate a 
+greater degree of data imbalance. 
+IRLbli =
+Y|Y|
+argmax
+yʹ= Y1
+(∑|D|
+j=1h
+ 
+yʹ, Yj
+))
+∑|D|
+j=1h
+ 
+yi, Yj
+) , h
+ 
+y, Yj
+)
+=
+{ 1, y∈ Yj
+0, y∕∈ Yj
+(2) 
+MeanIR= 1
+|Y|
+∑|Y|
+i=1
+IRLbli (3) 
+where h
+ 
+y, Yj
+)
+is an indicator function representing the number of 
+samples in the dataset containing the label Yj, while |Y| denotes the 
+number of target classes.
+CVIR, the coefficient of variation of IRperLabel, measures the 
+imbalance similarity across all targets. A higher CVIR value indicates 
+greater differences in imbalance levels among targets. 
+CVIR= 1
+MeanIR
+̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅
+∑|Y|
+i=1
+(IRLbli  MeanIR)2
+|Y|  1
+√√√√ (4) 
+ImR (M.-L. Zhang et al., 2022) measures the class skewness between 
+positive and negative samples, while MeanImR is the average of all class 
+ImR values. 
+ImRi = max
+ ⃒⃒D+
+i
+⃒⃒,
+⃒⃒D 
+i
+⃒⃒)
+min
+ ⃒⃒D+
+i
+⃒⃒,
+⃒⃒D 
+i
+⃒⃒) (5) 
+MeanImR= 1
+|Y|
+∑|Y|
+i=1
+ImRi (6) 
+where D+
+i is the number of positive samples of label Yi, and D 
+i is that of 
+the negative samples. Specifically, D+
+i = {xi,+1|yi∈ Yj, 1≤ j≤ N}, 
+D 
+i ={xi,  1|yi∕∈ Yj,1≤ j≤ N}.
+CVImR is the coefficient of variation of ImR, with higher values 
+indicating a higher imbalance level in the MTD. 
+CVImR= 1
+MeanImR
+̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅
+∑|Y|
+i=1
+ 
+ImRj  MeanImR
+)2
+|Y|  1
+√√√√ (7) 
+The properties of one MTD are presented in Table 2 as the three 
+MTDs differ only in their mixed-signal TIRs. The balance metrics pre-
+sented in Table 2 indicate that the MTDs are well-balanced. The distri-
+bution of each target class balance is reflected in the MeanIR value, 
+which is close to 1, while the CVIR and CVImR values remain near 0.
+Fig. 2. TIR Distribution Across Different MTDs.
+Table 1 
+TIR ranges and signal labels of underwater acoustic MTDs with interference.
+Signal Type SE_raw SE_norm Label
+PF PF / NTInf [-44, 38] [-26, 19] [1, 0, 0]
+MB MB / NTInf [-29, 29] [-24, 15] [0, 1, 0]
+RV RV / NTInf [-31, 36] [-15, 17] [0, 0, 1]
+PF + MB PF / NTInf 
+MB / NTInf
+[-45, 42] 
+[-34, 40]
+[-29, 19] 
+[-26, 20]
+[1, 1, 0]
+PF + RV PF / NTInf 
+RV / NTInf
+[-47, 45] 
+[-36, 40]
+[-30, 19] 
+[-16, 20]
+[1, 0, 1]
+MB + RV MB / NTInf 
+RV / NTInf
+[-34, 41] 
+[-34, 39]
+[-27, 19] 
+[-17, 20]
+[0, 1, 1]
+PF + MB + RV PF / NTInf 
+MB / NTInf 
+RV / NTInf
+[-46, 39] 
+[-35, 40] 
+[-34, 39]
+[-31, 21] 
+[-27, 20] 
+[-18, 21]
+[1, 1, 1]
+NTInf & Noise / / / [0, 0, 0]
+L. Chen et al.                                                                                                                                                                                                                                    Expert Systems With Applications 296 (2026) 129122 
+5 
+
+However, the number of signals containing only one target in con-
+structed MTDs is smaller than those containing multiple targets due to 
+the limited signal length of each target class in the ShipsEar dataset. The 
+existing MTD balance evaluation metrics do not fully capture the 
+imbalance characteristics between differently labeled samples in the 
+dataset. Therefore, we introduce sample-based dataset balance metrics 
+to provide a more comprehensive evaluation of MTD attributes.
+The sample-based metrics initially employ the label powerset 
+(Sorower, 2010) method to convert all label sets in the MTD into a single 
+label, transforming the dataset into a conventional multi-classification 
+dataset. Equations (8) to (10) provide the calculation details. 
+LP IRLbli = max
+ 
+LPj
+)
+LPi
+, 1≤ i≤ 2|Y| (8) 
+LP MeanIR= 1
+|LP|
+∑|LP|
+i=1
+LP IRLbli (9) 
+LP CVIR= 1
+LPMeanIR
+̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅
+∑|LP|
+i=1
+(LP IRLbli  LP MeanIR)2
+|LP|  1
+√√√√ (10) 
+where LP represents the transformed label, |LP| denotes the number of 
+classes in the transformed dataset, and LP IRLbli quantifies the disparity 
+in sample counts across classes. A larger LP IRLbli value indicates a 
+greater gap in sample numbers, signifying a higher level of sample-based 
+class imbalance in the dataset. LP MeanIR is the average of LP IRLbli, 
+and LP CVIR is the coefficient of variation.
+As shown in Table 2, the class balance ratio for each label is lower 
+than that of the corresponding target classes. This discrepancy reflects a 
+skewed distribution where certain labels occur more frequently than 
+others, emphasizing the necessity of implementing targeted resampling 
+strategies to address the class imbalance and enhance model 
+performance.
+3.2. Resampling methods for MTDs
+This work proposed two dataset-resample methods, the Underwater 
+Acoustic Borderline Oversampling (UABOS) method, and the Minority 
+Samples Weighted (MSW) method, to improve the balance level of 
+MTDs. The flowcharts of the two resampling methods are shown in 
+Fig. 3. It is worth noting that Fig. 3 is a schematic illustration based on 
+dimension-reduced data, whereas the input to the recognition model is 
+consistently in the form of Mel spectrograms.
+The UABOS method is an improved version of the multi-label over-
+sampling method based on borderline (MLBOS) (X.-Y. Zhang et al., 
+2023), specifically tailored for MTDs of underwater acoustic signals with 
+non-target interference. The sampling procedure is detailed in Fig. 3. (a) 
+and Algorithm 2.
+First, the label powerset method is applied for label conversion. 
+Subsequently, the t-SNE algorithm reduces the dimensionality of MTDs 
+to 2D to reduce the computational complexity of resampling, while the 
+MLBOS does not. Following this, Equation (11) calculates the proportion 
+of samples with different labels within the k-nearest neighbors 
+Di
+k={
+ 
+xi
+k,
+ 
+yi
+k
+)}K
+k=1 of each sample 
+{ 
+xi, yi
+)}
+in the minority class, 
+where the sample count falls below the class average. 
+ui = 1
+K
+∑
+j∈yi
+k
+II
+(
+yj ∕= yi
+)
+(11) 
+where I(⋅) is an indicator function, which returns 1 if the condition inside 
+Fig. 3. Flowcharts of Resampling Methods.
+Table 2 
+Statistical properties of MTD.
+LCard MeanIR CVIR MeanImR CVImR LP_MeanIR LP_CVIR
+SE_raw 2.18 1.03 0.02 2.67 0.09 14.06 1.25
+L. Chen et al.                                                                                                                                                                                                                                    Expert Systems With Applications 296 (2026) 129122 
+6 
+
+the parentheses is met and 0 otherwise.
+Algorithm 2 UABOS
+INPUT: MTD: D, dataset sample rate:p
+OUTPUT: resampled MTD Dʹ
+1. label conversion: Dj ∈ D(j= 1,2,...,dl), Nj =
+⃒⃒Dj
+⃒⃒
+2. Demb = tSNE(D), k= 1
+2 min
+ 
+Nj
+)
+, nnj = 0, BORDERS=∅
+3. FOR xi in D DO
+a.knni = KNN(xi,k)
+b. calculate type(xi) according to Eq.(11) and (12)
+c. IF type(xi)== ds THEN
+i.nnj = nnj + 1
+ii. BORDERS = BORDERS ∪xi
+4. calculate γi according to Eq. (13)
+5. FOR xi in BORDERS DO
+a. cloneSamples ← clone n× p× γi samples from xi
+b.Dʹ= Dʹ∪ cloneSamples
+6. RETURN Dʹ
+Equation (12) determines whether a sample is a boundary sample. The 
+MLBOS method categorizes samples into three groups based on the value 
+of ui. When ui = 1, the sample is assigned to a separate category and 
+excluded from resampling calculations.
+In contrast, the UABOS method merges the cases of 0.5≤ ui < 1 and 
+ui = 1, including both within the resampling procedure. 
+type(xi)=
+{
+ss, if0≤ ui < 0.5
+ds, if0.5≤ ui ≤ 1 (12) 
+where ss refers to a safe sample, while ds denotes a dangerous sample.
+Samples classified as ds types using Equations (11) and (12) require 
+up-sampling. Their hazard level, calculated using Equation (13), de-
+termines the sampling frequency. 
+γi =
+ 
+N  Nj
+)
+|Dj
+ds|∑ 
+N  Nj
+) (13) 
+where |Dj
+ds| is the number of dangerous samples in the j-th class of 
+samples, N is the mean value of each class of samples, and Nj is the 
+number of samples in each class.
+Table 3 presents the balance levels of the resampled MTDs. This 
+study performs resampling only on the training sets to better align with 
+practical application scenarios. The class balance is preserved during 
+dataset division, as a percentage of samples are randomly selected from 
+each class for the training set. The balance levels of the resampled 
+training sets closely align with those of the corresponding entire MTDs, 
+as shown in Table 3.
+In the UABOS algorithm, the resampling rate p was set to 1. 
+Following the application of UABOS, all MTD metrics either decreased 
+or remained stable. LP_MeanIR declined from 14.09 to 4.05, indicating a 
+reduced disparity in sample counts among classes within the resampled 
+MTD.
+The MSW method allocates weights to classes in the MTDs with 
+sample counts below the average, effectively duplicating samples from 
+these underrepresented classes to balance the distribution. This study 
+conducted several MSW resampling experiments to verify that the 
+resampled MTDs enhance recognition performance. Based on the find-
+ings, the final weights assigned to the three classes—PF, MB, and 
+RV—are 3, 5, and 5, respectively.
+The metrics of the MTD training set after resampling with the MSW 
+method, as shown in Table 3, indicate a reduction in LP_MeanIR and 
+LP_CVIR. This result suggests that the MSW resampling method en-
+hances the label balance of the MTD. However, as the different target 
+classes in the originally constructed MTD were already relatively 
+balanced, the MSW resampling process adjusts the sample count for each 
+target, leading to a slight increase in certain target-related metrics.
+Fig. 4 compares the TIR distributions of the MTDs before and after 
+resampling. The results demonstrate that the overall pattern of the TIR 
+distribution remains consistent, as the resampling method does not 
+substantially alter the data volume. Moreover, the resampling process 
+introduces a certain level of randomness, ensuring sufficient represen-
+tation of data within each TIR range.
+4. Recognition methodology
+The overall pipeline of our proposed UAMTR methodology is sum-
+marized in Fig. 5. It includes three main components: multi-target data 
+(MTD) construction, MTD resampling, and target recognition. This 
+section focuses on the recognition model.
+To address the challenge posed by non-target interference in un-
+derwater acoustic signals, this study presents a UAMTR model based on 
+TResNet (Ridnik, Lawen, et al., 2021). The TResNet model integrates the 
+ResNet (He et al., 2016) architecture with a channel attention mecha-
+nism (squeeze-and-excitation, SE) block (Hu et al., 2018). The channel 
+attention mechanism block dynamically emphasizes informative feature 
+channels while suppressing redundant or irrelevant ones, thereby 
+enhancing the model’s ability to utilize meaningful information. In the 
+presence of non-target interference in the UAMTR task, this mechanism 
+helps suppress interference and enables the model to focus on feature 
+channels that are more relevant to the target class. The structure of the 
+SE block is shown in Fig. 6.
+The SE block first applies global average pooling to the input W×
+H× C feature map, generating a channel-wise vector of size 1× 1× C, as 
+shown in Equation (14). 
+Zc = Fsq(Xi)= 1
+W× H
+∑W
+j=1
+∑H
+k=1
+Xi(j, k) (14) 
+where Zc is the value of the c-th channel of the compressed vector.
+This vector is then passed through a gating mechanism consisting of 
+two fully connected layers to learn the channel attention weights, as 
+defined in Equation (15). 
+F= Fex(z, W)= σ(W2δ(W1z)) (15) 
+where W is the network weights, σ and δ are the activation functions.
+Finally, the learned attention weights are applied to the original 
+feature map to perform channel-wise reweighting, as described in 
+Equation (16). 
+̂Xi = Fscale(Xi, F)= FXi (16) 
+where Fscale refers to channel-wise multiplication.
+This process enables the SE module to selectively enhance informa-
+tive channel features while suppressing those with strong noise inter-
+ference, thereby improving the representation of target-relevant 
+features.
+Table 3 
+Comparison of MTD properties before and after resampling.
+LCard MeanIR CVIR MeanImR CVImR LP_MeanIR LP_CVIR
+SE 2.18 1.03 0.02 2.67 0.09 14.06 1.25
+SE_trainset 2.18 1.03 0.02 2.67 0.09 14.09 1.25
+SE_UABOS 2.06 1.02 0.02 2.19 0.06 4.05 0.81
+SE_MSW 2.08 1.04 0.04 2.27 0.12 5.18 1.14
+L. Chen et al.                                                                                                                                                                                                                                    Expert Systems With Applications 296 (2026) 129122 
+7 
+
+The TResNet is available in three versions that differ in model depth 
+and channel count: TResNet-M, TResNet-L, and TResNet-XL. The pro-
+posed model, TResNet-LA, extends TResNet-L by incorporating a chan-
+nel attention layer. The architecture of TResNet-LA is depicted in Fig. 7.
+Although the original TResNet authors suggest that the SE module’s 
+global average pooling offers limited benefits in the final low-resolution 
+feature processing stage, our experimental findings reveal its critical role 
+in interference mitigation for underwater acoustic target recognition. 
+Based on this insight, the proposed TResNet-LA, an enhanced 
+architecture that integrates the SE module into the final stage of the 
+TResNet-L, is optimized for UAMTR in non-target interference-rich un-
+derwater environments.
+The left subplot in Fig. 7 depicts the architecture of the TResNet-LA 
+model, with the output feature dimensions displayed in brown font at 
+the lower right corner of each module. The model processes the Mel- 
+frequency spectrogram of an underwater acoustic multi-target signal 
+with interference as input, which has dimensions of 500 × 128.
+First, the spectrogram passes through a SpaceToDepth trans-
+Fig. 4. TIR Distribution of MTDs Before and After Resampling.
+Fig. 5. Flowchart of UAMTR Method.
+Fig. 6. A Channel Attention Mechanism (Squeeze-and-Excitation, SE) Block.
+L. Chen et al.                                                                                                                                                                                                                                    Expert Systems With Applications 296 (2026) 129122 
+8 
+
+formation layer (Sandler et al., 2019). The SpaceToDepth module re-
+organizes spatial data blocks into depth, effectively reducing the input 
+resolution and producing an output feature of 125 × 32 × 48. This 
+feature is then processed by a convolution layer to adjust the channel 
+count, followed by two Basic blocks and two Bottleneck blocks for 
+feature extraction. Subsequently, the SE layer performs the final feature 
+filtering, after which the resulting feature map undergoes global average 
+pooling before being passed to the fully connected layer. Given that this 
+task involves multi-target recognition, a Sigmoid activation function is 
+applied to map each dimension of the output vector to a value between 
+0 and 1. A threshold σ is then employed, where values exceeding the 
+threshold are set to 1, while the rest are set to 0, yielding the final 
+UAMTR predicted labels.
+The middle and right subplots of Fig. 7 display the structures of the 
+Basic block and Bottleneck block. IBN denotes Inplace-BatchNorm, 
+which performs tensor operations in place without creating additional 
+copies. The notation r= 4or8 following the SE layer represents the 
+reduction factor. In the TResNet-L model, the two Basic blocks and two 
+Bottleneck blocks are repeated 4, 5, 18, and 3 times, respectively. The 
+first three modules incorporate an SE layer, whereas the final module 
+does not. Details of the model architecture and training settings are 
+provided in Appendix C.
+Fig. 8 illustrates the structural comparison of the residual module in 
+the ResNet architecture before and after the integration of the SE block. 
+In the SE_ResNet module, the feature maps produced by the residual 
+block are fed into the SE module, which performs channel-wise 
+reweighting to enhance the salient features within the signal.
+5. Experimentation
+This work carried out a series of experiments to assess the effec-
+tiveness and robustness of the TResNet-LA model and the proposed 
+dataset resampling strategies for the UAMTR task. Section 5.1 provides a 
+comprehensive description of the experimental setup and evaluation 
+metrics. Section 5.2 validates the UAMTR method across three MTDs 
+with different TIR ranges, highlighting its impact on multi-target 
+recognition performance. Section 5.3 analyzes the impact of mixed 
+target quantity on recognition accuracy. Section 5.4 compares the ef-
+fects of two resampling techniques, UABOS and MSW, on recognition 
+results. Section 5.5 benchmarks the recognition performance of 
+TResNet-LA against baseline models in the UAMTR task under non- 
+target interference conditions. Finally, Appendix D showcases the 
+MTD constructed from the raw DeepShip (Irfan et al., 2021) signals, 
+along with the corresponding recognition results, to further validate the 
+model’s generalization capability on MTDs that closely resemble real- 
+world scenarios.
+Fig. 7. Architecture of the TResNet-LA Model.
+Fig. 8. The Schema of the Original Residual Module (left) and the SE_ResNet 
+Module (right).
+L. Chen et al.                                                                                                                                                                                                                                    Expert Systems With Applications 296 (2026) 129122 
+9 
+
+5.1. Experimental setup and evaluation metrics
+The datasets used in this section consist of the three MTDs con-
+structed in Section 3, each featuring different ranges of TIR. Table 1
+details the TIR ranges of the mixed signals in each MTD, and Fig. 2 vi-
+sualizes their distribution. All three MTDs share identical parameters 
+apart from the TIR ranges. Table 3 shows the average number of targets 
+per sample for each MTD and their balance level. During the experi-
+mental process, we divide each class of MTDs into training, validation, 
+and test sets in the ratio of 70 %, 15 %, and 15 %, with respective counts 
+of 26,831, 5,748, and 5,756. Except for part of the experiments in Sec-
+tion 5.2, all other analyses in this section use the complete dataset 
+constructed in Section 3.
+The evaluation metrics adopted in this study for multi-target recog-
+nition are consistent with standard multi-label classification assessment 
+frameworks, encompassing sample and label-based measures 
+(Tsoumakas et al., 2010). Sample-based metrics examine the differences 
+between the ground truth labels Yi and the predicted labels Zi across all 
+test samples, offering an overall assessment of performance at the 
+dataset level. In contrast, label-based metrics perform separate evalua-
+tions for each label, which, in the context of UAMTR, involves inde-
+pendently assessing the recognition results for specific targets.
+The sample-based evaluation metric adopted in this work is the 
+global accuracy (global_acc), formally defined through the following 
+equation: 
+global acc= 1
+|Dtest|
+∑|Dtest|
+i=1
+I(Zi = Yi) (17) 
+where |Dtest| represents the test set cardinality (total number of evalu-
+ation instances).
+The global_acc metric applies more stringent verification criteria, 
+considering a prediction correct only when both the target category 
+recognition and the quantity estimation exactly match the ground truth 
+annotations.
+The label-based evaluation framework employs two measurement 
+paradigms: macro and micro averages, computed using Equations (18) 
+and (19). 
+MacroM= 1
+L
+∑L
+i=1
+evalM(TPi, FPi, TNi, FNi) (18) 
+MicroM= evalM
+(
+1
+L
+∑L
+i=1
+TPi,
+∑L
+i=1
+FPi,
+∑L
+i=1
+TNi,
+∑L
+i=1
+FNi
+)
+(19) 
+where L denotes the label cardinality (total predicted targets), with TPi,
+FPi,TNi, and FNi representing the confusion matrix components for the 
+i-th target class: true positives, false positives, true negatives, and false 
+negatives, respectively.
+This study adopts macro-averaged metrics as the primary evaluation 
+mechanism for individual target recognition performance analysis. The 
+comprehensive assessment framework comprises accuracy, precision, 
+recall, F1-score (Sokolova & Lapalme, 2009), and mean Average Preci-
+sion (mAP) (Everingham et al., 2010). Macro-averaging treats each 
+target class equally, regardless of sample size, enabling a balanced 
+evaluation across target classes. Formal mathematical representations of 
+these metrics for the j-th target category are provided in Equations (20)- 
+(23). 
+Accuracyj = 1
+|D|
+∑|D|
+i=1
+I
+ 
+Yij = Zij
+)
+(20) 
+Precisionj = TPj
+TPj+ FPj
+(21) 
+Recallj = TPj
+TPj+ FNj
+(22) 
+F1j = 2*Precisionj*Recallj
+Precisionj*Recallj
+(23) 
+With the evaluation metrics established, we now outline the data 
+processing procedures and model settings crucial for obtaining reliable 
+and meaningful results. The signal processing pipeline applies a 1024- 
+point Hanning window to transform time-domain waveforms into Mel- 
+spectrogram representations, which serve as the model inputs. Critical 
+preprocessing parameters include 320-frame overlap, 128 Mel filter 
+banks, and a spectral bandwidth of 14 kHz. The training setup utilizes 
+Asymmetric Loss (ASL) (Ridnik, Ben-Baruch, et al., 2021) with focal 
+parameter settings (γ_neg = 6, γ_pos = 0), optimized through AdamW 
+with 32 batch sizes across 80 epochs. All model parameters were 
+initialized randomly, and the entire network was trained from scratch 
+without using any form of transfer learning.
+5.2. Performance of TResNet-LA across different TIRs
+Table 4 summarizes the recognition performance across the three 
+MTDs with different TIR ranges. The TResNet-LA model exhibits pro-
+gressive improvement as the TIR range becomes narrower, with global 
+accuracy increasing from 49.69 % to 91.38 %. On the SE_en0 MTD, the 
+model reaches peak performance with 91.38 % global_acc and 96.77 % 
+macro_acc. Notably, even in the most challenging SE_raw dataset char-
+acterized by wide TIR variations, the TResNet_LA model maintains 80 % 
+macro_acc, confirming its robustness in UAMTR under interference. The 
+visual analysis of the prediction results of the same sample at different 
+energy ratios is shown in Appendix B. The class-wise metrics are detailed 
+in Appendix E.
+Table 5 presents the recognition results on three MTDs without non- 
+target interference. Specifically, SE_raw_noInD, SE_norm_noInD, and 
+SE_en0_noInD correspond to the versions of SE_raw, SE_norm, and 
+SE_en0, respectively, where no non-target interference was added dur-
+ing the creation of the mixed signals.
+Compared with the results in Table 4, the model shows a significant 
+performance improvement in the absence of non-target interference. 
+The global accuracy increases by 18.51, 19.17, and 6.71 percentage 
+points on SE_raw_noInD, SE_norm_noInD, and SE_en0_noInD, respec-
+tively. The improvement is more pronounced on SE_raw and SE_norm, 
+where the energy differences among targets are larger, while the gains 
+on SE_en0 are relatively moderate. A similar trend is observed across 
+other evaluation metrics as well.
+These results suggest that the model performs better when non-target 
+interference is absent, indicating that it is indeed learning discriminative 
+target features rather than relying on background interference patterns. 
+This provides further evidence of the model’s strong generalization 
+ability and robustness.
+Fig. 9 shows the recognition performance of the TResNet_LA model 
+across three evaluation metrics—accuracy, F1-score, and mAP—for in-
+dividual targets under different dataset configurations. The results 
+reveal that PF targets consistently exhibit the lowest recognition per-
+formance on both SE_raw and SE_norm MTDs compared to other targets, 
+primarily due to their broader energy fluctuation range. As shown in 
+Table 1, PF displays greater TIR variance than others, making it more 
+Table 4 
+Recognition results of non-target interfered MTDs under various TIRs.
+global_acc macro_acc precision recall F1-score mAP
+SE_raw 49.69 78.77 84.49 86.77 85.60 93.65
+SE_norm 68.16 87.30 91.14 91.52 91.32 97.57
+SE_en0 91.38 96.77 97.39 98.21 97.80 99.71
+L. Chen et al.                                                                                                                                                                                                                                    Expert Systems With Applications 296 (2026) 129122 
+10 
+
+susceptible to signal interference and thus posing additional recognition 
+challenges.
+Interestingly, the SE_en0 dataset presents a notable exception, where 
+PF slightly outperforms RV in recognition metrics, offering direct 
+empirical evidence that TIR fluctuations substantially affect recognition 
+performance. This comparative analysis confirms that broader energy 
+variance in SE_raw and SE_norm MTDs inherently increases the diffi-
+culty of target recognition.
+The confusion matrices in Fig. 10 reveal the misclassification pat-
+terns among MB, RV, and PF targets. The MB class was incorrectly 
+predicted as a combination of PF and MB in 43.33 %, 73.33 %, and 20 % 
+of samples across the three MTDs. Likewise, the RV class was mis-
+classified as a mixture of PF and RV in 48.94 %, 61.70 %, and 31.91 % of 
+samples. PF targets were most frequently misclassified as either dual- 
+target or three-target signals.
+The model exhibits an inherent multiclass prediction bias, prefer-
+entially predicting multiple targets over single-target instances. For 
+instance, when processing signals containing two target types, the model 
+frequently predicted them as three-target signals, especially on the 
+SE_raw and SE_norm MTDs. Additionally, the model demonstrated 
+weaker performance in recognizing single-class targets against multi- 
+target signals. This limitation stems from the scarcity of single-target 
+samples within the dataset. The sample imbalance led the model to 
+favor multi-target predictions while showing reduced effectiveness in 
+single-target recognition. This study introduced two dataset resample 
+methods to mitigate data imbalance effects on recognition results. Sec-
+tion 5.4 presents the recognition performance after dataset resampling.
+Fig. 11 presents the recognition error rates across different TIR 
+ranges. The error rate within each interval is calculated as the propor-
+tion of misrecognized samples relative to the total number of samples in 
+Table 5 
+Recognition results of MTDs without interference under various TIRs.
+global_acc macro_acc precision recall F1-score mAP
+SE_raw_noInD 68.20 88.27 91.76 92.33 92.04 97.91
+SE_norm_noInD 87.87 95.66 97.53 96.55 97.03 99.63
+SE_en0_noInD 98.09 99.23 99.41 99.54 99.47 99.97
+Fig. 9. Recognition Performance Across TIR Ranges for Individual Targets.
+Fig. 10. Confusion Matrices of Three MTD Test Sets.
+L. Chen et al.                                                                                                                                                                                                                                    Expert Systems With Applications 296 (2026) 129122 
+11 
+
+that specific TIR range. For multi-target samples, the assigned range is 
+determined by the lowest TIR value among the targets present. Samples 
+without detectable target signals are excluded from these calculations to 
+ensure a focused evaluation. The error rates reflect a sample-based 
+assessment, requiring exact matches between predictions and the 
+ground truth. For SE_norm, the first and final ranges include samples 
+with TIR values below   20 dB and above 10 dB, respectively.
+The results reveal elevated error rates in lower TIR intervals. This 
+trend arises because samples with lower TIRs contain low-energy targets 
+whose features are masked by stronger targets and interference, result-
+ing in greater recognition challenges. Specifically, when TIR drops 
+below   10 dB, the recognition error rate becomes markedly high. In 
+contrast, as the TIR surpasses 10 dB, the error rate decreases signifi-
+cantly with increasing TIR, except for a slight anomaly in the 20 to 30 dB 
+range for the SE_raw dataset. Notably, the SE_raw dataset maintains 
+complete and accurate recognition for over 40 % of samples even when 
+TIRs are below 30 dB, confirming the effectiveness and robustness of 
+TResNet-LA.
+Additionally, SE_norm shows reduced error rates compared to 
+SE_raw across all TIR intervals. This improvement results from nar-
+rowing the dataset’s TIR range, which facilitates more accurate feature 
+extraction and lowers the complexity of recognition.
+5.3. Effect of mixed target quantity on recognition accuracy
+This section presents comparative experiments on MTDs featuring 
+different numbers of mixed targets to explore how the quantity of targets 
+within mixed signals influences multi-target recognition accuracy. 
+Specifically, we exclude categories containing three-target mixtures 
+from the three MTDs constructed in Section 3.1, resulting in SE_r-
+aw_tar2, SE_norm_tar2, and SE_en0_tar2 MTDs, each comprising at most 
+two-target mixtures. Multi-target recognition experiments under non- 
+target interference conditions were subsequently carried out using 
+these refined MTDs. The experimental configurations remained consis-
+tent throughout, with the only variation being the MTDs used. Figs. 12 
+and 13 depict the comparative results for global and macro accuracy.
+As shown in Fig. 12, the removal of three-target mixtures results in 
+substantial improvements in global recognition accuracy. The gains are 
+13.97, 10.26, and 1.35 percentage points for the raw, normalized, and 0 
+dB TIR MTDs, respectively. Additional macro accuracy results across 
+individual targets are presented in Fig. 13.
+These improvements are primarily attributed to the effect of target 
+masking under varying TIR conditions. In MTDs with broader TIR 
+ranges, weaker target signals are more likely to be masked by stronger 
+non-target interference. As the number of mixed targets increases, signal 
+overlap becomes more complex, intensifying the interference and 
+further suppressing the recognition of weaker targets. Therefore, 
+reducing the number of mixed targets in these MTDs helps mitigate 
+masking effects and significantly improves recognition accuracy.
+In contrast, for the dataset with a fixed 0 dB TIR—where target and 
+non-target signals have approximately equal energy—the masking effect 
+is less severe, and the model becomes less sensitive to the number of 
+mixed targets. As shown in Fig. 6(c), the recognition accuracy for two- 
+target and three-target mixtures remains similarly close in this sce-
+nario. Consequently, the accuracy gains from removing three-target 
+mixtures are modest, and in some cases, target-specific recognition ac-
+curacy may even slightly decrease.
+5.4. Effect of resampling strategies on recognition performance
+This section evaluates the impact of the data resampling method on 
+recognition performance. The evaluation involves three MTDs with 
+different TIR ranges and employs both TResNet-L and TResNet-LA 
+models to guarantee unbiased results.
+Tables 6 and 7 provide the recognition performance of models before 
+and after applying two different dataset resampling methods. Fig. 14
+illustrates the recognition results for each target within the SE_norm 
+dataset. It is important to emphasize that only the training sets under-
+went resampling, while the validation and test sets remained un-
+changed.Table 8.
+Across six experimental groups, the differences in global_acc be-
+tween higher-accuracy resampled and non-resampled MTDs are 1.25, 
+0.82,   0.17, 1.65, 1.79, and 0.37. An exception occurs with the SE_en0 
+dataset, where the TResNet-LA model shows marginally lower global_-
+acc after resampling. This exception stems from the SE_en0 dataset 
+having a 0 dB TIR, allowing the TResNet-LA model to perform well 
+under such interference. In this case, most recognition failures arise 
+when target features become entirely obscured. It is hard to resolve by 
+resampling the dataset. On the contrary, duplicating samples may 
+introduce redundant information into the dataset, potentially reducing 
+the recognition performance.
+However, Table 7 reveals modest accuracy gains for the TResNet-L 
+model on the resampled SE_en0_UABOS and SE_en0_MSW MTDs 
+compared to the original SE_en0. The improvement suggests that the 
+TResNet-L model is less capable of fully extracting discriminative 
+Fig. 11. Recognition Error Rates of SE_raw and SE_norm Test Sets on Varying 
+TIR Ranges.
+Fig. 12. Global Accuracy Comparison of MTDs with Varying Mixed Target 
+Numbers and TIRs.
+L. Chen et al.                                                                                                                                                                                                                                    Expert Systems With Applications 296 (2026) 129122 
+12 
+
+features from underwater acoustic multi-target signals than the 
+TResNet-LA. Consequently, dataset resampling provides measurable 
+benefits for TResNet-L despite its limitations in feature extraction.
+Concerning recognition accuracy, three groups of experiments show 
+improved results with MSW-resampled MTDs, two perform better with 
+UABOS-resampled data, and one achieves higher accuracy without any 
+resampling. Table 3 indicates that the UABOS and MSW resampling 
+methods improve the dataset balance level. The MSW method, however, 
+slightly introduces some target imbalance. It is important to note that 
+data balance alone does not determine final recognition performance. 
+Experimental results show that tuning the weights of the MSW method 
+for each underrepresented category does not necessarily improve the 
+recognition accuracy of underwater acoustic multi-target signals. The 
+MSW method cannot determine weights based solely on balance metrics. 
+The UABOS method achieves better target and label balance than the 
+MSW method but does not guarantee a significant improvement in 
+recognition performance.
+Fig. 14 demonstrates that dataset resampling algorithms enhance 
+recognition performance across all targets. Nonetheless, PF maintains 
+the lowest recognition accuracy among the three targets, while the RV 
+target achieves the highest. This result occurs because the resampling 
+method adjusts only sample quantities without increasing data diversity. 
+The RV target continues to exhibit the highest TIR fluctuations in the 
+resampled dataset. Therefore, improving data balance boosts recogni-
+tion performance within limits but cannot surpass targets with lower 
+energy range fluctuations.
+5.5. Performance comparison of TResNet-LA and baseline models
+This section evaluates the effectiveness of the proposed TResNet-LA 
+model by comparing its recognition performance against TResNet-L, 
+ResNet50 (He et al., 2016), TResNet-M (Ridnik, Lawen, et al., 2021), 
+and the channel attention-enhanced variants of the latter two models, 
+ResNet50-A and TResNet-MA. The overall recognition results on three 
+Fig. 13. Macro Accuracy Comparison of Individual MTD Targets with Varying Mixed Target Numbers.
+Table 6 
+TResNet-LA recognition performance using different resampling methods.
+Dataset Methods global_acc macro_acc precision recall F1-score mAP
+​ Not resample 49.69 78.77 84.49 86.77 85.60 93.65
+SE_raw UABOS 50.66 79.25 84.89 87.01 85.92 93.75
+MSW 50.94 79.33 84.91 87.04 85.96 93.62​
+Not resmaple 68.16 87.30 91.14 91.52 91.32 97.57SE_norm
+UABOS 68.79 87.57 91.52 91.46 91.49 97.51
+MSW 68.98 87.67 91.17 92.09 91.61 97.42​
+Not resample 91.38 96.77 97.39 98.21 97.80 99.71SE_en0
+UABOS 90.83 96.59 97.3 98.07 97.68 99.71
+MSW 91.21 96.70 97.46 98.05 97.75 99.72​
+Table 7 
+TResNet-L recognition performance using different resampling methods.
+Dataset Resample method global_acc macro_acc precision recall F1-score mAP
+​ Not resample 46.30 77.56 83.67 85.95 84.80 93.11
+SE_raw UABOS 47.95 78.08 84.15 86.16 85.12 93.20
+MSW 47.41 78.11 84.08 86.25 85.13 92.70​
+Not resmaple 63.19 85.59 89.47 91.08 90.25 96.67SE_norm
+UABOS 64.37 86.27 89.71 91.77 90.72 97.23
+MSW 64.98 86.47 89.70 92.18 90.90 97.13​
+Not resample 88.81 95.97 96.23 98.36 97.28 99.66SE_en0
+UABOS 89.18 96.11 96.55 98.20 97.36 99.67
+MSW 89.09 96.10 96.49 98.25 97.36 99.68​
+L. Chen et al.                                                                                                                                                                                                                                    Expert Systems With Applications 296 (2026) 129122 
+13 
+
+MTDs are presented in Table 8. Target-based recognition performance 
+comparisons are detailed in Fig. 15. To ensure a fair comparison, ex-
+periments on each dataset maintained identical settings across models 
+except for the recognition architectures. All reported results in this 
+section are based on the MSW-resampled dataset. The architectures and 
+configurations of the baseline models are shown in Fig. C.3 of Appendix 
+C.
+As shown in Table 8, the proposed TResNet-LA model consistently 
+outperforms the baseline models across all three MTDs. These results 
+highlight the enhanced capability and generalization of TRessNet-LA in 
+UAMTR under non-target interference conditions. Specifically, TResNet- 
+LA achieves global_acc improvements of 7.82, 5.98, and 9.02 percentage 
+points over the weakest baseline model on three MTDs. Its macro_acc 
+surpasses the lowest-performing baseline by 2.59, 1.91, and 3.33 per-
+centage points, respectively. The comparative analysis reveals that 
+global_acc exhibits greater model sensitivity than other metrics. These 
+results arise because global_acc requires models to recognize distinct 
+target features and differentiate interference signals for accurately 
+determining target type and count. In conclusion, TResNet-LA out-
+performs all baseline models in class prediction accuracy and quantity 
+estimation for underwater acoustic targets.
+Besides that, ResNet50-A, TResNet-MA, and TResNet-LA consistently 
+achieve higher global_acc across all three MTDs compared to their 
+counterparts without channel attention layers. The only exception ap-
+pears in the SE_en0 MTD, where ResNet50 and ResNet50-A show iden-
+tical global_acc. While incorporating channel attention does not 
+Fig. 14. Recognition Performance for Each Target Before and After Dataset Resampling of SE_norm MTD: (Rows 1–2) Results for TResNet-LA and TResNet-L; 
+(Columns 1–3) accuracy, F1-score and mAP for Each Model on Each Target.
+Table 8 
+Recognition results on different models and MTDs.
+Dataset Model global_acc macro_acc precision recall F1-score mAP
+​
+SE_raw ResNet50 43.12 76.86 81.08 88.94 84.82 92.58
+ResNet50-A 44.26 76.74 81.46 88.04 84.62 91.49
+TResNet-M 47.64 77.83 84.04 85.86 84.93 93.17
+TResNet-MA 49.32 78.46 84.51 86.17 85.33 93.57
+TResNet-L 47.41 78.11 84.08 86.25 85.13 92.70
+TResNet-LA 50.94 79.33 84.91 87.04 85.96 93.62
+​
+SE_norm ResNet50 63.00 86.05 88.02 93.85 90.81 96.58
+ResNet50-A 66.93 87.37 89.91 93.33 91.56 96.81
+TResNet-M 63.63 85.76 89.45 91.32 90.36 97.07
+TResNet-MA 66.41 86.49 90.73 90.78 90.74 97.26
+TResNet-L 64.98 86.47 89.70 92.18 90.90 97.13
+TResNet-LA 68.98 87.67 91.17 92.09 91.61 97.42
+​
+SE_en0 ResNet50 82.19 93.54 94.13 97.29 95.67 99.07
+ResNet50-A 82.19 93.37 94.31 96.80 95.54 99.03
+TResNet-M 88.57 95.88 96.45 97.97 97.20 99.62
+TResNet-MA 90.48 96.45 97.07 98.11 97.58 99.70
+TResNet-L 89.09 96.10 96.49 98.25 97.36 99.68
+TResNet-LA 91.21 96.70 97.46 98.05 97.75 99.72
+L. Chen et al.                                                                                                                                                                                                                                    Expert Systems With Applications 296 (2026) 129122 
+14 
+
+Fig. 15. Recognition Results for Each Target on Different Models and MTDs: (Rows 1–3) Results for the SE_raw, SE_norm, and SE_en0 MTDs; (Columns 1–3) pre-
+cision, recall and F1-score for Each Target Across Different Models.
+L. Chen et al.                                                                                                                                                                                                                                    Expert Systems With Applications 296 (2026) 129122 
+15 
+
+guarantee improvements on all metrics, it generally leads to better 
+recognition performance. Specifically, on the SE_norm MTD, the glob-
+al_acc of the three attention-enhanced models increased by 3.93, 2.78, 
+and 4.00 percentage points compared to their counterparts without 
+attention layers. This study validates the effectiveness of channel 
+attention mechanisms in boosting recognition performance for under-
+water acoustic multi-target tasks through comprehensive evaluations 
+across multiple MTDs and diverse model architectures, thereby mini-
+mizing potential random experimental biases.
+Fig. 15 presents the recognition precision, recall, and F1-score for 
+each target across different models. The first column of Fig. 15 shows 
+that the recognition precision trends for each target align with the 
+patterns observed in Table 8. Models equipped with the channel atten-
+tion layer consistently achieve higher recognition precision than those 
+without. Among all models, TResNet-LA obtains the highest recognition 
+precision for each target. On the SE_raw and SE_norm MTDs, it achieves 
+the highest precision for RV targets, followed by MB, while PF targets 
+have the lowest precision. This result is consistent with the conclusion in 
+Section 5.2.
+The results shown in the second column of Fig. 15 demonstrate 
+distinct performance patterns among models. ResNet50 and ResNet50-A 
+achieve the highest recall rates but simultaneously register the lowest 
+precision values. This imbalance indicates their tendency toward over- 
+classification of positive samples, which increases misidentification 
+risks when processing interference signals. This tendency ultimately 
+leads to their notably low global_acc and macro_acc shown in Table 8, 
+despite their strong recall capabilities.
+In contrast, TResNet-LA demonstrates competitive recall perfor-
+mance, slightly lower than ResNet50 and ResNet50-A, while maintain-
+ing clear advantages across all other metrics. These findings collectively 
+confirm that TResNet-LA delivers superior recognition performance for 
+UAMTR tasks under interference conditions. The model effectively 
+balances recall and accuracy, making it a more reliable solution 
+compared to baseline architectures.
+6. Conclusion
+This paper proposes TResNet-LA, a robust deep-learning model 
+specifically designed to tackle the challenges of UAMTR under non- 
+target interference conditions. To support this task, three non-target 
+interfered multi-target datasets (MTDs)—SE_raw, SE_norm, and 
+SE_en0—are generated from the ShipsEar dataset by mixing raw, 
+maximum-normalized, and energy-normalized signals, each represent-
+ing different TIR ranges. In addition, this study proposes two novel 
+evaluation metrics to assess the balance level of these MTDs and in-
+troduces two resampling strategies to address the class imbalance 
+problem. Experimental results demonstrate that the MSW resampling 
+method enhances the global accuracy of the TResNet-LA model on the 
+SE_raw MTD by over one percentage point. Moreover, our model 
+achieves over 90 % global recognition accuracy on the SE_en0 MTD. It is 
+worth noticing that TResNet-LA significantly outperforms baseline 
+models, achieving state-of-the-art recognition accuracy in UAMTR.
+7. Discussion and future work
+While this study demonstrates the effectiveness of deep learning 
+models using synthetic mixed signals for the interfered UAMTR task, it is 
+essential to acknowledge the limitations and risks associated with such 
+modern techniques. Although synthetic signals are valuable for data 
+augmentation and domain simulation, they may introduce distributional 
+biases that do not fully capture the complexity of real-world underwater 
+environments. Moreover, deep learning models—such as the ResNet- 
+based framework employed in this work—lack interpretability, which 
+poses challenges for their deployment in safety–critical applications like 
+underwater surveillance. The generalization ability of models trained on 
+synthetic data also remains uncertain when exposed to previously un-
+seen or diverse acoustic interferences in real-world scenarios. Although 
+the resampling strategy used in this study effectively improves the class 
+balance of the mixed target dataset (MTD) by adjusting the number of 
+samples for minority classes, it does not enhance the diversity of the 
+samples. As a result, the improvement in recognition performance 
+brought by this approach remains limited.
+Our future work will aim to improve model interpretability, inte-
+grate uncertainty estimation, and explore physics-informed or hybrid 
+learning approaches to enhance robustness. Additionally, extensive 
+evaluation of real-world and cross-domain datasets will be conducted to 
+better define the deployment boundaries and ensure reliability in 
+mission-critical underwater monitoring applications. Moreover, our 
+future work will explore sample generation methods to refine the MTD. 
+These methods aim to improve not only the class balance but also the 
+diversity and authenticity of the samples, making the constructed MTD 
+more representative of real-world underwater acoustic environments.
+Declaration of competing interest
+The authors declare that they have no known competing financial 
+interests or personal relationships that could have appeared to influence 
+the work reported in this paper.
+Acknowledgments
+This work was supported by the China Scholarship Council No. 
+202406090084, the National Natural Science Foundation of China 
+under Grant 12174053, the Fund of Science and Technology on Sonar 
+Laboratory No. 2023-JCJQ-LB-32/08, the Fundamental Research Funds 
+for Central Universities No. 2242024K30004, 2242025F20003, and the 
+Stable Supporting Fund of National Key Laboratory of Underwater 
+Acoustic Technology No. JCKYS2023604SSJS014.
+Appendix A 
+L. Chen et al.                                                                                                                                                                                                                                    Expert Systems With Applications 296 (2026) 129122 
+16 
+
+Fig. A1. Waveform and Mel-frequency spectrogram of one-target signals before and after mixed. Columns: target PF, InD, mixed signal; Rows: raw (TIR   30 dB), 
+max-normalized (TIR   10 dB), energy-normalized signals (TIR 0 dB).
+L. Chen et al.                                                                                                                                                                                                                                    Expert Systems With Applications 296 (2026) 129122 
+17 
+
+Fig. A2. Waveform and Mel-frequency spectrogram of two-target signals before and after mixed. Columns: target MB, target RV, InD, mixed signal; Rows: raw (TIR 
+  9 dB,   34 dB), max-normalized (TIR 2 dB,   11 dB), energy-normalized signals (TIR 0 dB).
+L. Chen et al.                                                                                                                                                                                                                                    Expert Systems With Applications 296 (2026) 129122 
+18 
+
+Fig. A3. Waveform and Mel-frequency spectrogram of three-target signals before and after mixed. Columns: target PF, target MB, target RV, InD, mixed signal; Rows: 
+raw (TIR   17 dB,   25 dB,   18 dB), max-normalized (TIR   1 dB,   20 dB, 3 dB), energy-normalized signals (TIR 0 dB).
+Appendix B 
+Fig. B.1 presents the waveform and Mel spectrograms of the same sample under different Target-to-Interference Ratio (TIR) conditions, both before 
+and after mixing. The mixed signals come from the SE_raw, SE_norm, and SE_en0 datasets. Table B.1 presents the corresponding TIR values, predicted 
+probabilities, predicted labels, and ground truth for the sample in each dataset. Predicted probabilities greater than 0.8 are treated as 1, while the rest 
+are treated as 0 to obtain the binary prediction labels.
+From Fig. B.1, it can be observed that as the energy gap between different targets and interference narrows, the Mel spectrogram of the mixed 
+signal retains more information. Specifically, in the SE_raw and SE_norm datasets, due to the weak energy of the RV target (TIR below   10 dB), most of 
+its information is masked in the mixed signal, including the strong low-frequency components (0–512 Hz) and the vertical lines in the high-frequency 
+range. In contrast, in the SE_en0 dataset, since the energy levels of both targets and interference are normalized, the features of all targets are largely 
+preserved in the mixed signal.
+As shown in Table B.1, when the mixed signal contains targets with low TIR, the model tends to make incorrect predictions—such as classifying the 
+sample in SE_raw as containing all three targets. When the energy of the weak target is slightly enhanced (as in SE_norm), the model yields a correct 
+prediction, but with probabilities of [0.77, 0.99, 0.83], indicating uncertainty in its decision. In contrast, in SE_en0, the predicted probabilities are 
+[0.15, 1.0, 1.0], suggesting the model confidently recognizes the presence of MB and RV targets and accurately excludes the third. These differences in 
+predicted probabilities across TIR conditions further demonstrate that TIR is a critical factor affecting recognition performance under interference in 
+UAMTR tasks.
+L. Chen et al.                                                                                                                                                                                                                                    Expert Systems With Applications 296 (2026) 129122 
+19 
+
+Table B1 
+Parameters of example.
+TIR predicted probability predicted label ground truth
+SE_raw 4 dB /   18 dB [0.96, 0.99, 0.99] [1, 1, 1] [0, 1, 1]
+SE_norm 3 dB /   11 dB [0.77, 0.99, 0.83] [0, 1, 1] [0, 1, 1]
+SE_en0 0 dB [0.15, 1.0, 1.0] [0, 1, 1] [0, 1, 1]
+Fig. B1. Example of waveform and Mel-frequency spectrogram of signals before and after mixed. Columns: target MB, target RV, InD, mixed signal; Rows: raw 
+signals, max-normalized signals, energy-normalized signals.
+L. Chen et al.                                                                                                                                                                                                                                    Expert Systems With Applications 296 (2026) 129122 
+20 
+
+Appendix C 
+Appex
+Table C1 
+Summary of TResNet-LA model structure and input dimensions.
+Layer name Output size Model configuration
+Input size 500 × 128
+Space to depth 125 × 32 Block size 4
+Conv1 125 × 32 3 × 3, 76, stride 2
+SE_conv1 125 × 32 ⎡
+⎣
+3× 3, 76, stride1
+3× 3, 76, stride1
+SEblock, C64
+⎤
+⎦× 4
+SE_conv2 63 × 16 ⎡
+⎢⎢⎢⎢⎣
+3× 3, 152, stride1
+3× 3, 152, stride1
+[averagepool2× 2, stride2]
+1× 1, 152, stride1
+SEblock, C64
+⎤
+⎥⎥⎥⎥⎦
+× 5
+SE_conv3 32 × 8 ⎡
+⎢⎢⎢⎢⎢⎢⎣
+1× 1, 304, stride1
+3× 3, 304, stride1
+1× 1, 1216, stride1
+[averagepool2× 2, stride2]
+1× 1, 1216, stride1
+SEblock, C152
+⎤
+⎥⎥⎥⎥⎥⎥⎦
+× 18
+Conv2 16 × 4 ⎡
+⎢⎢⎢⎢⎣
+1× 1, 608, stride1
+3× 3, 608, stride1
+1× 1, 2432, stride1
+[averagepool2× 2, stride2]
+1× 1, 2432, stride1
+⎤
+⎥⎥⎥⎥⎦
+× 3
+SE block 16 × 4 C 152
+Global average pool, FC, sigmoid 1 × 3 ​
+Table C2 
+Model Training Parameters.
+parameter name value
+MTDs train set 26,831
+valid set 5,748
+test set 5,756
+Mel_spectrogram sample rate 32000 Hz
+frame length 1024
+hop length 320
+FFT size 1024
+Mel bins 128
+spectral bandwidth [0, 14000] Hz
+ASL loss γ_neg 6
+γ_pos 0
+model training batch size 32
+epoch 80
+learning rate 1e-4
+Table C3 
+Architecture of baseline models.
+ResNet50 ResNet50-A TResNet-M TResNet-MA TResNet-L
+Input size 500 × 128
+Conv 7 × 7, 64, stride 2 Space to depth, block size 4
+Max pool 3 × 3, stride 2 Conv 3 × 3, 76, stride 2⎡
+⎣
+conv1× 1, 64
+conv3× 3, 64
+conv1× 1, 256
+⎤
+⎦× 3
+⎡
+⎣
+conv1× 1, 64
+conv3× 3, 64
+conv1× 1, 256
+⎤
+⎦× 3
+[
+conv3× 3, 76
+conv3× 3, 76
+]
+× 3
+⎡
+⎣
+conv3× 3, 76
+conv3× 3, 76
+SEblock, C64
+⎤
+⎦× 3
+[
+conv3× 3, 76
+conv3× 3, 76
+]
+× 4
+⎡
+⎣
+conv1× 1, 128
+conv3× 3, 128
+conv1× 1, 512
+⎤
+⎦× 4
+⎡
+⎣
+conv1× 1, 128
+conv3× 3, 128
+conv1× 1, 512
+⎤
+⎦× 4
+⎡
+⎢⎢⎣
+conv3× 3, 152
+conv3× 3, 152
+[average pool 2× 2]
+conv1× 1, 152
+⎤
+⎥⎥⎦× 4
+⎡
+⎢⎢⎢⎢⎣
+conv3× 3, 152
+conv3× 3, 152
+[average pool 2× 2]
+conv1× 1, 152
+SEblock, C64
+⎤
+⎥⎥⎥⎥⎦
+× 4
+⎡
+⎢⎢⎣
+conv3× 3, 152
+conv3× 3, 152
+[average pool 2× 2]
+conv1× 1, 152
+⎤
+⎥⎥⎦× 5
+⎡
+⎣
+conv1× 1, 256
+conv3× 3, 256
+conv1× 1, 1024
+⎤
+⎦× 6
+⎡
+⎣
+conv1× 1, 256
+conv3× 3, 256
+conv1× 1, 1024
+⎤
+⎦× 6
+⎡
+⎢⎢⎢⎢⎣
+conv1× 1, 304
+conv3× 3, 304
+conv1× 1, 1216
+[average pool 2× 2]
+conv1× 1, 1216
+⎤
+⎥⎥⎥⎥⎦
+× 11
+⎡
+⎢⎢⎢⎢⎢⎢⎣
+conv1× 1, 304
+conv3× 3, 304
+conv1× 1, 1216
+[average pool 2× 2]
+conv1× 1, 1216
+SEblock, C152
+⎤
+⎥⎥⎥⎥⎥⎥⎦
+× 11
+⎡
+⎢⎢⎢⎢⎣
+conv1× 1, 304
+conv3× 3, 304
+conv1× 1, 1216
+[average pool 2× 2]
+conv1× 1, 1216
+⎤
+⎥⎥⎥⎥⎦
+× 18
+(continued on next page)
+L. Chen et al.                                                                                                                                                                                                                                    Expert Systems With Applications 296 (2026) 129122 
+21 
+
+Table C3 (continued)
+ResNet50 ResNet50-A TResNet-M TResNet-MA TResNet-L
+⎡
+⎣
+conv1× 1, 512
+conv3× 3, 512
+conv1× 1, 2048
+⎤
+⎦× 3
+⎡
+⎣
+conv1× 1, 512
+conv3× 3, 512
+conv1× 1, 2048
+⎤
+⎦× 3SE block, C 128
+⎡
+⎢⎢⎢⎢⎣
+conv1× 1, 608
+conv3× 3, 608
+conv1× 1, 2432
+[average pool 2× 2]
+conv1× 1, 2432
+⎤
+⎥⎥⎥⎥⎦
+× 3
+⎡
+⎢⎢⎢⎢⎣
+conv1× 1, 608
+conv3× 3, 608
+conv1× 1, 2432
+[average pool 2× 2]
+conv1× 1, 2432
+⎤
+⎥⎥⎥⎥⎦
+× 3SE block, C 152
+⎡
+⎢⎢⎢⎢⎣
+conv1× 1, 608
+conv3× 3, 608
+conv1× 1, 2432
+[average pool 2× 2]
+conv1× 1, 2432
+⎤
+⎥⎥⎥⎥⎦
+× 3
+Average pool, FC, sigmoid 
+output size 1 × 3
+Appendix D 
+Appex
+D.1 MTD based on DeepShip
+The three distinct target signal classes selected from the DeepShip dataset are cargo (CG), passenger ship (PS), and tanker (TK), along with one class 
+of non-target interference (tug, denoted as NTInf). The signals were sampled at 32 kHz with a duration of 5 s. The process of constructing the mixed 
+signal dataset with non-target interference based on the DeepShip dataset follows a procedure similar to that of ShipsEar, as detailed in Algorithm 1. 
+The resulting mixed target dataset (MTD) is referred to as DS. Detailed information about the DS is provided in Tables D.1 and D.2, as well as Fig. D.1. 
+The recognition results are summarized in Table D.3 and Fig. D.2.
+Fig. D.1 shows that the TIR distribution of the MTD constructed from the raw DeepShip signals follows an approximately normal distribution, 
+similar to the SE_raw and SE_norm MTDs. This observation aligns with our expectations for multi-target signals collected from real underwater 
+acoustic environments. Therefore, at the current stage of validating the effectiveness and feasibility of the proposed method, we temporarily assume 
+this distribution reflects real-world conditions.
+Table D1 
+TIR ranges and signal labels of underwater acoustic MTDs with interference.
+Signal Type TIR Label Training Samples validation samples test samples
+CG PF / NTInf [–33, 44] [1, 0, 0] 4543 973 973
+PS MB / NTInf [-34, 41] [0, 1, 0] 5163 1106 1106
+TK RV / NTInf [-28, 42] [0, 0, 1] 6101 1307 1307
+CG + PS PF / NTInf 
+MB / NTInf
+[–33, 43] 
+[–33, 49]
+[1, 1, 0] 5599 1199 1199
+CG + TK PF / NTInf 
+RV / NTInf
+[-27, 40] 
+[-34, 42]
+[1, 0, 1] 5600 1200 1200
+PS + TK MB / NTInf 
+RV / NTInf
+[–32, 45] 
+[-30, 41]
+[0, 1, 1] 5600 1200 1200
+CG + PS + TK PF / NTInf 
+MB / NTInf 
+RV / NTInf
+[-34, 37] 
+[–33, 46] 
+[-30, 38]
+[1, 1, 1] 5600 1200 1200
+NTInf / / [0, 0, 0] 4818 1032 1033
+Fig. D1. TIR Distribution of MTD Based on DeepShip.
+As shown in Table D.1, the sample quantities for each class and the MTD balance metrics in Table D.2 indicate that the MTD constructed from the 
+DeepShip dataset has a high class and label balance. As a result, no resampling procedures were applied to this dataset in this study.
+L. Chen et al.                                                                                                                                                                                                                                    Expert Systems With Applications 296 (2026) 129122 
+22 
+
+Table D2 
+Comparison of MTD properties.
+LCard MeanIR CVIR MeanImR CVImR LP_MeanIR LP_CVIR
+DS 1.73 1.04 0.04 1.37 0.08 1.13 0.10
+DS_trainset 1.73 1.04 0.04 1.37 0.09 1.13 0.10
+D.2 Recognition results
+Table D.3 presents the recognition results of the TResNet-LA model on the DeepShip-based MTD dataset. The first three rows show the recognition 
+performance for the three target classes, while the last row summarizes the overall performance.
+As shown in Table D.3, the model achieves highly similar recognition performance across the three target classes, with accuracy exceeding 77 % for 
+all. In terms of precision, recall, and F1-score, the TK class performs slightly better than the other two. Additionally, all three classes achieve mAP 
+scores above 86 %, with the PS class reaching the highest at 88.68 %.
+The last row presents the overall recognition performance, with a global accuracy of 50.36 %. This result suggests that more than half of the 
+samples were correctly recognized in both target type and quantity. Nevertheless, as shown in Fig. D.2, the model achieves almost perfect accuracy for 
+the NTInf class but struggles to fully recognize both the type and quantity of samples containing targets. Specifically, the model tends to overestimate 
+the number of targets, often misrecognizing samples containing one target as having two and those containing two targets as having three. This 
+observation is consistent with the results presented in Section 5.2, where the model exhibited similar tendencies on the SE_raw and SE_norm MTDs.
+Overall, the model demonstrates relatively consistent performance across the three target classes, with comparable values across all metrics. This 
+result indicates that the model has a balanced recognition capability for different target classes, further validating its generalization ability across 
+different datasets. In future work, we will continue to refine our method to enhance the model’s recognition performance in complex interference 
+scenarios.
+Table D3 
+Recognition results of non-target interfered MTD based on DeepShip.
+global_acc accuracy precision recall F1-score mAP
+CG / 77.08 76.12 78.39 77.24 86.15
+PS / 78.03 78.12 79.1 78.61 88.68
+TK / 77.53 78.24 80.01 79.12 88.46
+overall 50.36 77.55 77.49 79.17 78.32 87.76
+Fig. D2. Confusion matrix on test set.
+L. Chen et al.                                                                                                                                                                                                                                    Expert Systems With Applications 296 (2026) 129122 
+23 
+
+Appendix E 
+Appex
+Table D1 
+Global recognition metrics of non-target interfered MTDs under various TIRs.
+Accuracy precision recall F1-score
+SE_raw 49.69 36.08 36.59 35.97
+SE_norm 68.16 53.29 52.99 52.80
+SE_en0 91.38 88.22 84.74 86.34
+Data availability
+Data will be made available on request.
+References
+Aghdam, G., Reza, M., Azhdari, H., Majid, S., Mohammad, K., & Mohammad, K. (2023). 
+Feature Extraction from Passive Sonar Data based on the Combination of Cepstrum 
+and Short-Time Fourier Transform. Imam Khomeini University of Marine Sciences, 27 
+(105), 1–10.
+Alouani, Z., Hmamouche, Y., Khamlichi, B. E., & Seghrouchni, A. E. F. (2022). A Spatio- 
+temporal Deep Learning Approach for Underwater Acoustic Signals Classification. In 
+2022 18th IEEE International Conference on Advanced Video and Signal Based 
+Surveillance (AVSS) (pp. 1–7). https://doi.org/10.1109/AVSS56176.2022.9959247
+Aslam, M. A., Zhang, L., Liu, X., Irfan, M., Xu, Y., Li, N., Zhang, P., Jiangbin, Z., & 
+Yaan, L. (2024). Underwater sound classification using learning based methods: A 
+review. Expert Syst. Appl., 255, Article 124498. https://doi.org/10.1016/j. 
+eswa.2024.124498
+Bianco, M. J., Gerstoft, P., Traer, J., Bianco, M. J., Gerstoft, P., Traer, J., Ozanich, E., 
+Roch, M. A., Gannot, S., & Deledalle, C.-A. (2019). Machine learning in acoustics: 
+Theory and applications. J. Acoust. Soc. Am., 146(5), 3590–3628. https://doi.org/ 
+10.1121/1.5133944
+Borchani, H., Bielza, C., Toro, C., & Larra˜naga, P. (2013). Predicting human 
+immunodeficiency virus inhibitors using multi-dimensional Bayesian network 
+classifiers. Artif. Intell. Med., 57(3), 219–229. https://doi.org/10.1016/j. 
+artmed.2012.12.005
+Charte, F., & Rivera, A. (2013). A first Approach to Deal with Imbalance in Multi-label 
+Datasets. In Lecture Notes in Computer Science. International Conference on Hybrid 
+Artificial Intelligence Systems. https://doi.org/10.1007/978-3-642-40846-5_16
+Charte, F., Rivera, A. J., del Jesus, M. J., & Herrera, F. (2015). Addressing imbalance in 
+multilabel classification: Measures and random resampling algorithms. 
+Neurocomputing, 163, 3–16. https://doi.org/10.1016/j.neucom.2014.08.091
+Chen, J., Han, B., Ma, X., & Zhang, J. (2021). Underwater Target Recognition based on 
+Multi-Decision LOFAR Spectrum Enhancement: A Deep-Learning Approach. Future 
+Internet, 13(10), 265. https://doi.org/10.3390/fi13100265
+Chen, J., Liu, C., Xie, J., An, J., & Huang, N. (2022). Time-Frequency Mask Aware Bi- 
+directional LSTM: A Deep Learning Approach for Underwater Acoustic Signal Separation 
+(No. arXiv:2202.04405). arXiv. http://arxiv.org/abs/2202.04405.
+Cheng, W., & Hüllermeier, E. (2009). Combining instance-based learning and logistic 
+regression for multilabel classification. Mach. Learn., 76, 211–225. https://doi.org/ 
+10.1007/s10994-009-5127-5
+Chu, X., Duan, H., Wen, Z., Xu, L., Hu, R., & Xiang, W. (2025). Union-Domain Knowledge 
+Distillation for Underwater Acoustic Target Recognition. IEEE Trans. Geosci. Remote 
+Sens., 63, 1–16. https://doi.org/10.1109/TGRS.2025.3539476
+Clare, A., & King, R. D. (2001). Knowledge Discovery in Multi-label Phenotype Data. In L. 
+De Raedt & A. Siebes (Eds.), Principles of Data Mining and Knowledge Discovery (pp. 
+42–53). Springer. doi: 10.1007/3-540-44794-6_4.
+Davis, S., & Mermelstein, P. (1980). Comparison of parametric representations for 
+monosyllabic word recognition in continuously spoken sentences. IEEE Trans. Acoust. 
+Speech Signal Process., 28(4), 357–366. https://doi.org/10.1109/ 
+TASSP.1980.1163420
+Duan, J., Gu, Y., Yu, H., Yang, X., & Gao, S. (2024). ECC ++: An algorithm family based 
+on ensemble of classifier chains for classifying imbalanced multi-label data. Expert 
+Syst. Appl., 236, Article 121366. https://doi.org/10.1016/j.eswa.2023.121366
+Elisseeff, A., & Weston, J. (2001). A kernel method for multi-labelled classification. 
+Advances in Neural Information Processing Systems, 14. https://proceedings.neurips. 
+cc/paper/2001/hash/39dcaf7a053dc372fbc391d4e6b5d693-Abstract.html.
+Everingham, M., Van Gool, L., Williams, C. K. I., Winn, J., & Zisserman, A. (2010). The 
+Pascal Visual Object classes (VOC) Challenge. Int. J. Comput. Vis., 88(2), 303–338. 
+https://doi.org/10.1007/s11263-009-0275-4
+Feng, H., Chen, X., Wang, R., Wang, H., Yao, H., & Wu, F. (2024). Underwater acoustic 
+target recognition method based on WA-DS decision fusion. Appl. Acoust., 217, 
+Article 109851. https://doi.org/10.1016/j.apacoust.2024.109851
+Feng, S., Ma, S., Zhu, X., & Yan, M. (2024). Artificial Intelligence-based Underwater 
+Acoustic Target Recognition: A Survey. Remote Sens. (Basel), 16(17). https://doi. 
+org/10.3390/rs16173333
+Feng, S., & Zhu, X. (2022). A Transformer-based Deep Learning Network for Underwater 
+Acoustic Target Recognition. IEEE Geosci. Remote Sens. Lett., 19, 1–5. https://doi. 
+org/10.1109/LGRS.2022.3201396
+Filho, E., Santos, A., Sinezio, H., Filho, E., Fernandes, A., & Seixas, J. (2022). Empirical 
+Mode Decomposition: Theory and applications in Underwater Acoustics. Journal of 
+Communication and Information Systems, 37(1), 145. https://doi.org/10.14209/ 
+jcis.2022.16
+Fırat, U., & Akgül, T. (2018). Compressive Sensing for Detecting Ships With Second- 
+Order Cyclostationary Signatures. IEEE Journal of Oceanic Engineering, 43(4), 
+1086–1098. IEEE Journal of Oceanic Engineering. doi: 10.1109/JOE.2017.2740698.
+Fu, B., Nie, J., Wei, W., & Zhang, L. (2025). Constructing a Multi-Modal based 
+Underwater Acoustic Target Recognition Method with a Pre-trained Language-Audio 
+Model. IEEE Trans. Geosci. Remote Sens., 63, 1–14. https://doi.org/10.1109/ 
+TGRS.2024.3515171
+Fürnkranz, J., Hüllermeier, E., Mencía, E. L., & Brinker, K. (2008). Multilabel 
+classification via calibrated label ranking. Mach. Learn., 73, 133–153. https://doi. 
+org/10.1007/s10994-008-5064-8
+Gil-Begue, S., Bielza, C., & Larra˜naga, P. (2021). Multi-dimensional Bayesian network 
+classifiers: A survey. Artif. Intell. Rev., 54(1), 519–559. https://doi.org/10.1007/ 
+s10462-020-09858-x
+Guo, Y., & Schuurmans, D. (2011). Adaptive Large Margin Training for Multilabel 
+Classification. Proceedings of the Twenty-Fifth AAAI Conference on Artificial Intelligence, 
+25, 374–379. https://doi.org/10.1609/aaai.v25i1.7895
+He, K., Zhang, X., Ren, S., & Sun, J. (2016). Deep Residual Learning for image 
+Recognition. IEEE Conference on Computer Vision and Pattern Recognition (CVPR), 
+2016, 770–778. https://doi.org/10.1109/CVPR.2016.90
+Hong, F., Liu, C., Guo, L., Chen, F., & Feng, H. (2021). Underwater Acoustic Target 
+Recognition with a Residual Network and the Optimized Feature Extraction Method. 
+Appl. Sci., 11(4), 1442. https://doi.org/10.3390/app11041442
+Hu, J., Shen, L., & Sun, G. (2018). Squeeze-and-Excitation Networks. 2018 IEEE/CVF 
+Conference on Computer Vision and Pattern Recognition. 2018 IEEE/CVF Conference on 
+Computer Vision and Pattern Recognition.
+Irfan, M., Jiangbin, Z., Ali, S., Iqbal, M., Masood, Z., & Hamid, U. (2021). DeepShip: An 
+underwater acoustic benchmark dataset and a separable convolution based 
+autoencoder for classification. Expert Syst. Appl., 183, Article 115270. https://doi. 
+org/10.1016/j.eswa.2021.115270
+Ji, S., Tang, L., Yu, S., & Ye, J. (2008). Extracting shared subspace for multi-label 
+classification. In Proceedings of the 14th ACM SIGKDD International Conference on 
+Knowledge Discovery and Data Mining (pp. 381–389). https://doi.org/10.1145/ 
+1401890.1401939
+Jia, H., Khishe, M., Mohammadi, M., & Rashidi, S. (2022). Deep cepstrum-wavelet 
+autoencoder: A novel intelligent sonar classifier. Expert Syst. Appl., 202, Article 
+117295. https://doi.org/10.1016/j.eswa.2022.117295
+Jiang, J., Wu, Z., Lu, J., Huang, M., & Xiao, Z. (2021). Interpretable features for 
+underwater acoustic target recognition. Measurement, 173, Article 108586. https:// 
+doi.org/10.1016/j.measurement.2020.108586
+Jin, A., & Zeng, X. (2023). A Novel Deep Learning Method for Underwater Target 
+Recognition based on Res-Dense Convolutional Neural Network with attention 
+Mechanism. Journal of Marine Science and Engineering, 11(1), 69. https://doi.org/ 
+10.3390/jmse11010069
+Jin, S.-Y., Su, Y., Ma, C.-Y., Fan, Y.-X., & Tao, Z.-Y. (2025). Hierarchical feature 
+extraction of intrinsic modes for ship-radiated noise classification. Ocean Eng., 326, 
+Article 120878. https://doi.org/10.1016/j.oceaneng.2025.120878
+Ke, X., Yuan, F., & Cheng, E. (2018). Underwater Acoustic Target Recognition based on 
+Supervised Feature-Separation Algorithm. Sensors, 18(12). https://doi.org/10.3390/ 
+s18124318
+Khishe, M., Mosavi *, M. R., & Safarpour, B. (2021). Extraction of Desirable Perceptual 
+Domain Properties Improved by the Whale Optimization Algorithm to Detect 
+Underwater Acoustic Targets. Marine Technology, 8(3), 11–24. https://www. 
+magiran.com/paper/2365673/extraction-of-desirable-perceptual-domain- 
+properties-improved-by-the-whale-optimization-algorithm-to-detect-underwater- 
+acoustic-targets$?lang=en.
+Khishe, M., & Mosavi, M. R. (2020). Classification of underwater acoustical dataset using 
+neural network trained by Chimp Optimization Algorithm. Appl. Acoust., 157, Article 
+107005. https://doi.org/10.1016/j.apacoust.2019.107005
+Law, A., & Ghosh, A. (2022). Multi-Label Classification Using Binary Tree of Classifiers. 
+IEEE Transactions on Emerging Topics in Computational Intelligence, 6(3), 677–689. 
+L. Chen et al.                                                                                                                                                                                                                                    Expert Systems With Applications 296 (2026) 129122 
+24 
+
+IEEE Transactions on Emerging Topics in Computational Intelligence. doi: 10.1109/ 
+TETCI.2021.3075717.
+Li, G., Bu, W., & Yang, H. (2024). Noise reduction method for ship radiated noise signal 
+based on modified uniform phase empirical mode decomposition. Measurement, 227, 
+Article 114193. https://doi.org/10.1016/j.measurement.2024.114193
+Lian, Z., Xu, K., Wan, J., Li, G., & Chen, Y. (2017). Underwater acoustic target 
+recognition based on Gammatone filterbank and instantaneous frequency. In 2017 
+IEEE 9th International Conference on Communication Software and Networks (ICCSN) 
+(pp. 1207–1211). https://doi.org/10.1109/ICCSN.2017.8230302
+Lin, B., Gao, L., Zhu, P., Zhang, Y., & Huang, Y. (2024). An Underwater Acoustic Target 
+Recognition Method based on Iterative Short-Time Fourier Transform. IEEE Sens. J., 
+24(16), 26199–26210. https://doi.org/10.1109/JSEN.2024.3424500
+Liu, B., Blekas, K., & Tsoumakas, G. (2022). Multi-label sampling based on local label 
+imbalance. Pattern Recogn., 122, Article 108294. https://doi.org/10.1016/j. 
+patcog.2021.108294
+Liu, F., Shen, T., Luo, Z., Zhao, D., & Guo, S. (2021). Underwater target recognition using 
+convolutional recurrent neural networks with 3-D Mel-spectrogram and data 
+augmentation. Appl. Acoust., 178, Article 107989. https://doi.org/10.1016/j. 
+apacoust.2021.107989
+Liu, H., Wu, X., & Zhang, S. (2016). Neighbor selection for multilabel classification. 
+Neurocomputing, 182, 187–196. https://doi.org/10.1016/j.neucom.2015.12.035
+Ma, Y., Liu, M., Zhang, Y., Zhang, B., Xu, K., Zou, B., & Huang, Z. (2022). Imbalanced 
+Underwater Acoustic Target Recognition with Trigonometric loss and attention 
+Mechanism Convolutional Network. Remote Sens. (Basel), 14(16), 4103. https://doi. 
+org/10.3390/rs14164103
+Maryam, K., Hamed, A., Khishe, H., Mahmoodzadeh, M., & Azar, M. (2022). Variable- 
+length deep convolutional neural networks by internet protocol chimp optimization 
+algorithm for underwater micro-target classification. Iranian Journal of Marine 
+Technology, 9(4), 1–18.
+Neupane, D., & Seok, J. (2020). A Review on Deep Learning-based Approaches for 
+Automatic Sonar Target Recognition. Electronics, 9(11), 1972. https://doi.org/ 
+10.3390/electronics9111972
+Park, D. S., Chan, W., Zhang, Y., Chiu, C.-C., Zoph, B., Cubuk, E. D., & Le, Q. V. (2019). 
+SpecAugment: A simple Data Augmentation Method for Automatic Speech 
+Recognition. Interspeech, 2019, 2613–2617. https://doi.org/10.21437/ 
+Interspeech.2019-2680
+Qiao, W., Khishe, M., & Ravakhah, S. (2021). Underwater targets classification using 
+local wavelet acoustic pattern and Multi-Layer Perceptron neural network optimized 
+by modified Whale Optimization Algorithm. Ocean Eng., 219, Article 108415. 
+https://doi.org/10.1016/j.oceaneng.2020.108415
+Rajan, R., Deepa, B., & Bhai, D. S. (2016). Cyclostationarity based Sonar Signal 
+Processing. Procedia Comput. Sci., 93, 683–689. https://doi.org/10.1016/j. 
+procs.2016.07.263
+Read, J., Pfahringer, B., Holmes, G., & Frank, E. (2011). Classifier chains for multi-label 
+classification. Mach. Learn., 25, 333–359. https://doi.org/10.1007/s10994-011- 
+5256-5
+Sandler, M., Baccash, J., Zhmoginov, A., & Howard, A. (2019). Non-discriminative data or 
+weak model? On the relative importance of data and model resolution, arXiv. https://doi. 
+org/10.48550/arXiv.1909.03205
+Santos-Domínguez, D., Torres-Guijarro, S., Cardenal-L´opez, A., & Pena-Gimenez, A. 
+(2016). ShipsEar: An underwater vessel noise database. Appl. Acoust., 113, 64–69. 
+https://doi.org/10.1016/j.apacoust.2016.06.008
+Shi, X., Chen, Z., Wang, H., Yeung, D.-Y., Wong, W., & Woo, W. (2015). Convolutional 
+LSTM Network: A machine learning approach for precipitation nowcasting. 
+Proceedings of the 28th International Conference on Neural Information Processing 
+Systems - Volume 1, 802–810.
+Sokolova, M., & Lapalme, G. (2009). A systematic analysis of performance measures for 
+classification tasks. Inf. Process. Manag., 45(4), 427–437. https://doi.org/10.1016/j. 
+ipm.2009.03.002
+Sorower, M. S. (2010). A Literature Survey on Algorithms for Multi-label Learning. 
+Oregon State University, 18(1).
+Sun, Q., & Wang, K. (2022). Underwater single-channel acoustic signal multitarget 
+recognition using convolutional neural networks. J. Acoust. Soc. Am., 151(3), 
+2245–2254. https://doi.org/10.1121/10.0009852
+Tang, R., Chen, Y., Gao, J., Wang, Y., & Hao, S. (2025). Towards real-time detection of 
+underwater target with pruning lightweight deep learning method in side-scan sonar 
+images. Neurocomputing, 620, Article 129254. https://doi.org/10.1016/j. 
+neucom.2024.129254
+Tsoumakas, G., Katakis, I., & Vlahavas, I. (2010). Mining Multi-label Data. In O. Maimon, 
+& L. Rokach (Eds.), Data Mining and Knowledge Discovery Handbook (pp. 667–685). 
+US: Springer. https://doi.org/10.1007/978-0-387-09823-4_34. 
+Wang, J., Qian, P., Chen, Y., Zhou, S., Li, Z., & Xiao, P. (2025). Adaptive underwater 
+acoustic target recognition based on multi-scale residual and attention mechanism. 
+Digital Signal Process., 163, Article 105193. https://doi.org/10.1016/j. 
+dsp.2025.105193
+Wang, P., & Peng, Y. (2020). Research on Feature Extraction and Recognition Method of 
+Underwater Acoustic Target based on Deep Convolutional Network. In 2020 IEEE 
+International Conference on Advances in Electrical Engineering and Computer 
+Applications(AEECA) (pp. 863–868). https://doi.org/10.1109/ 
+AEECA49918.2020.9213504
+Wang, X., Meng, J., Liu, Y., Zhan, G., & Tian, Z. (2022). Self-supervised acoustic 
+representation learning via acoustic-embedding memory unit modified space 
+autoencoder for underwater target recognition. J. Acoust. Soc. Am., 152(5), 2905. 
+https://doi.org/10.1121/10.0015138
+Wang, X., Zhang, Y., Xiao, Z., & Huang, M. (2023). HIDR: A Hierarchical Independent 
+Detection and Recognition strategy for underwater acoustic multi-target recognition. 
+Appl. Acoust., 211, Article 109503. https://doi.org/10.1016/j. 
+apacoust.2023.109503
+Wu, G., Zheng, R., Tian, Y., & Liu, D. (2020). Joint Ranking SVM and Binary Relevance 
+with robust Low-rank learning for multi-label classification. Neural Netw., 122, 
+24–39. https://doi.org/10.1016/j.neunet.2019.10.002
+Xie, Y., Ren, J., & Xu, J. (2022). Adaptive ship-radiated noise recognition with learnable 
+fine-grained wavelet transform. Ocean Eng., 265, Article 112626. https://doi.org/ 
+10.1016/j.oceaneng.2022.112626
+Xu, J., Li, X., Zhang, D., Chen, Y., Peng, Y., & Liu, W. (2025). Enhanced underwater 
+acoustic target recognition using parallel dual-branch network with attention 
+mechanism. Eng. Appl. Artif. Intel., 158, Article 111603. https://doi.org/10.1016/j. 
+engappai.2025.111603
+Yang, S., Jin, A., Zeng, X., Wang, H., Hong, X., & Lei, M. (2024). Underwater acoustic 
+target recognition based on sub-band concatenated Mel spectrogram and 
+multidomain attention mechanism. Eng. Appl. Artif. Intel., 133, Article 107983. 
+https://doi.org/10.1016/j.engappai.2024.107983
+Zhang, M.-L., Li, Y.-K., Yang, H., & Liu, X.-Y. (2022). Towards Class-Imbalance Aware 
+Multi-Label Learning. IEEE Transactions on Cybernetics, 52(6), 4459–4471. IEEE 
+Transactions on Cybernetics. doi: 10.1109/TCYB.2020.3027509.
+Zhang, M.-L., & Zhou, Z.-H. (2014). A Review on Multi-Label Learning Algorithms. IEEE 
+Transactions on Knowledge and Data Engineering, 26(8), 1819–1837. IEEE 
+Transactions on Knowledge and Data Engineering. doi: 10.1109/TKDE.2013.39.
+Zhang, X.-Y., Wang, R., & Wang, D. D. (2023). Multi-Label Oversampling based on 
+Borderline. International Conference on Machine Learning and Cybernetics (ICMLC), 
+2023, 50–56. https://doi.org/10.1109/ICMLC58545.2023.10328011
+Zhu, M., Zhang, X., Jiang, Y., Wang, K., Su, B., & Wang, T. (2023). In Springer Nature (pp. 
+728–738). https://doi.org/10.1007/978-981-99-6187-0_72
+Zhu, S., Ji, X., Xu, W., & Gong, Y. (2005). Multi-labelled classification using maximum 
+entropy method. In Proceedings of the 28th Annual International ACM SIGIR Conference 
+on Research and Development in Information Retrieval (pp. 274–281). https://doi.org/ 
+10.1145/1076034.1076082
+L. Chen et al.                                                                                                                                                                                                                                    Expert Systems With Applications 296 (2026) 129122 
+25 

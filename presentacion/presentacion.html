@@ -1,0 +1,1459 @@
+<title>TResNet-LA Amazónico</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #F2F4F1;
+    --surface: #FFFFFF;
+    --surface-raised: #F8FAF7;
+    --surface-sunken: #EBEFEA;
+    --border: #DCE3DD;
+    --border-strong: #C3CDC3;
+    --text-primary: #12181A;
+    --text-secondary: #56635C;
+    --text-muted: #7C8880;
+    --accent-blue: #2a78d6;
+    --accent-blue-soft: #E4EEFA;
+    --accent-orange: #eb6834;
+    --accent-orange-soft: #FCE9DF;
+    --accent-aqua: #0f9a6c;
+    --accent-aqua-soft: #DEF3E9;
+    --status-good: #0ca30c;
+    --status-critical: #d03b3b;
+    --status-good-soft: #E2F5E1;
+    --status-critical-soft: #FBE4E3;
+    --shadow: 0 1px 2px rgba(20,30,25,.04), 0 8px 24px -12px rgba(20,30,25,.18);
+    --chart-grid: #DCE3DD;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #0C1210;
+      --surface: #131C19;
+      --surface-raised: #17211D;
+      --surface-sunken: #0F1614;
+      --border: #223029;
+      --border-strong: #2E4038;
+      --text-primary: #EAEFEC;
+      --text-secondary: #9AAAA2;
+      --text-muted: #71847B;
+      --accent-blue: #3987e5;
+      --accent-blue-soft: #16273D;
+      --accent-orange: #d95926;
+      --accent-orange-soft: #3A2416;
+      --accent-aqua: #23b17e;
+      --accent-aqua-soft: #123328;
+      --status-good: #2FB82F;
+      --status-critical: #E66767;
+      --status-good-soft: #123320;
+      --status-critical-soft: #3A1A1A;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 12px 32px -14px rgba(0,0,0,.55);
+      --chart-grid: #223029;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0C1210;
+    --surface: #131C19;
+    --surface-raised: #17211D;
+    --surface-sunken: #0F1614;
+    --border: #223029;
+    --border-strong: #2E4038;
+    --text-primary: #EAEFEC;
+    --text-secondary: #9AAAA2;
+    --text-muted: #71847B;
+    --accent-blue: #3987e5;
+    --accent-blue-soft: #16273D;
+    --accent-orange: #d95926;
+    --accent-orange-soft: #3A2416;
+    --accent-aqua: #23b17e;
+    --accent-aqua-soft: #123328;
+    --status-good: #2FB82F;
+    --status-critical: #E66767;
+    --status-good-soft: #123320;
+    --status-critical-soft: #3A1A1A;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 12px 32px -14px rgba(0,0,0,.55);
+    --chart-grid: #223029;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: "Public Sans", ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+  h1, h2, h3 { font-family: "Fraunces", Georgia, serif; margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
+  .mono { font-family: "JetBrains Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+  a { color: var(--accent-blue); }
+
+  /* ===== Fixed-resolution canvas, scaled to fit viewport ===== */
+  .page {
+    height: 100vh; width: 100vw;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 12px; padding: 12px;
+  }
+  .deck-wrap { flex: 1; min-height: 0; width: 100%; display: flex; align-items: center; justify-content: center; }
+  .scaler { width: 1280px; height: 720px; flex-shrink: 0; transform-origin: center center; }
+  .stage {
+    width: 1280px; height: 720px; position: relative;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; box-shadow: var(--shadow); overflow: hidden;
+  }
+  .slide {
+    position: absolute; inset: 0; width: 1280px; height: 720px;
+    display: flex; flex-direction: column; visibility: hidden;
+    padding: 24px 34px 18px; overflow: hidden;
+  }
+  .slide.is-active { visibility: visible; }
+
+  .eyebrow-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 9px; flex-shrink: 0; height: 24px; }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-family: "Public Sans", sans-serif; font-weight: 700; font-size: 11px;
+    letter-spacing: .09em; text-transform: uppercase;
+    padding: 4px 10px; border-radius: 100px;
+    background: var(--surface-sunken); color: var(--text-secondary);
+    border: 1px solid var(--border);
+  }
+  .eyebrow .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .slide[data-section="metodologia"] .eyebrow { color: var(--accent-blue); background: var(--accent-blue-soft); border-color: transparent; }
+  .slide[data-section="implementacion"] .eyebrow { color: var(--accent-orange); background: var(--accent-orange-soft); border-color: transparent; }
+  .slide[data-section="resultados"] .eyebrow { color: var(--accent-aqua); background: var(--accent-aqua-soft); border-color: transparent; }
+  .slide-num { font-family: "JetBrains Mono", monospace; font-size: 11.5px; color: var(--text-muted); }
+
+  .slide h2 { font-size: 21px; font-weight: 600; line-height: 1.14; margin-bottom: 1px; flex-shrink: 0; }
+  .slide .sub { color: var(--text-secondary); font-size: 12px; margin-bottom: 10px; flex-shrink: 0; }
+  .slide-body { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
+
+  .grid-2 { display: grid; grid-template-columns: 1.1fr 1fr; gap: 16px; flex: 1; min-height: 0; }
+  .grid-2.wide-left { grid-template-columns: 1.35fr 1fr; }
+  .grid-2.even { grid-template-columns: 1fr 1fr; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; flex-shrink: 0; }
+  .stack { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+  .row { display: flex; gap: 10px; }
+  .row > * { flex: 1; min-width: 0; }
+
+  p { margin: 0 0 6px; font-size: 12.5px; line-height: 1.48; color: var(--text-primary); }
+  p:last-child { margin-bottom: 0; }
+  .lede { font-size: 13.5px; line-height: 1.55; }
+  ul.clean { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 5px; }
+  ul.clean li { font-size: 12px; line-height: 1.42; padding-left: 14px; position: relative; }
+  ul.clean li::before { content: ""; position: absolute; left: 0; top: 6px; width: 5px; height: 5px; border-radius: 50%; background: var(--accent-blue); }
+  ul.clean.orange li::before { background: var(--accent-orange); }
+  ul.clean.aqua li::before { background: var(--accent-aqua); }
+
+  .card {
+    background: var(--surface-raised); border: 1px solid var(--border);
+    border-radius: 10px; padding: 11px 13px; min-height: 0; overflow: hidden;
+  }
+  .card h3 { font-size: 12.5px; font-weight: 600; margin-bottom: 5px; color: var(--text-primary); }
+  .card .k { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); font-weight: 700; }
+  .card.flush { padding: 8px; display: flex; align-items: center; justify-content: center; }
+
+  .callout {
+    border-radius: 10px; padding: 10px 13px; font-size: 11.5px; line-height: 1.42;
+    border: 1px solid var(--border); flex-shrink: 0;
+  }
+  .callout.quote { background: var(--surface-sunken); font-style: italic; color: var(--text-secondary); border-left: 3px solid var(--accent-aqua); border-radius: 4px 10px 10px 4px; }
+  .callout.finding { background: var(--accent-aqua-soft); border-color: transparent; }
+  .callout.warn { background: var(--status-critical-soft); border-color: transparent; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+  thead th {
+    text-align: left; font-size: 9.5px; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--text-muted); font-weight: 700; padding: 4px 7px; border-bottom: 1px solid var(--border-strong);
+    white-space: nowrap;
+  }
+  tbody td { padding: 4px 7px; border-bottom: 1px solid var(--border); font-family: "JetBrains Mono", monospace; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  tbody td.txt { font-family: "Public Sans", sans-serif; white-space: normal; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr.hi td { background: var(--accent-aqua-soft); font-weight: 600; }
+  .best { color: var(--accent-aqua); font-weight: 700; }
+  .table-wrap { overflow: hidden; border: 1px solid var(--border); border-radius: 8px; }
+  .table-wrap.spacious thead th { padding: 11px 12px; font-size: 11px; }
+  .table-wrap.spacious tbody td { padding: 16px 12px; font-size: 13.5px; }
+
+  .badge { display: inline-flex; align-items: center; gap: 5px; font-family: "JetBrains Mono", monospace; font-size: 10.5px; font-weight: 600; padding: 2px 8px; border-radius: 100px; background: var(--surface-sunken); border: 1px solid var(--border); color: var(--text-secondary); }
+  .badge.up { color: var(--status-good); background: var(--status-good-soft); border-color: transparent; }
+  .badge.down { color: var(--status-critical); background: var(--status-critical-soft); border-color: transparent; }
+
+  .formula { background: var(--surface-sunken); border-radius: 8px; padding: 8px 12px; font-family: "JetBrains Mono", monospace; font-size: 11px; line-height: 1.7; color: var(--text-primary); }
+  .formula .term { color: var(--accent-blue); }
+  .formula .comment { color: var(--text-muted); font-style: italic; }
+
+  code.snip { display: block; background: var(--surface-sunken); border-radius: 8px; padding: 13px 15px; font-family: "JetBrains Mono", monospace; font-size: 12px; line-height: 1.85; white-space: pre; overflow: hidden; color: var(--text-primary); }
+  code.snip .kw { color: var(--accent-orange); }
+  code.snip .cm { color: var(--text-muted); }
+
+  .stat { display: flex; flex-direction: column; gap: 0px; }
+  .stat .v { font-family: "JetBrains Mono", monospace; font-size: 19px; font-weight: 600; line-height: 1; }
+  .stat .l { font-size: 9.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; margin-top: 3px; }
+  .stat.blue .v { color: var(--accent-blue); }
+  .stat.orange .v { color: var(--accent-orange); }
+  .stat.aqua .v { color: var(--accent-aqua); }
+  .stat.crit .v { color: var(--status-critical); }
+  .stat-card { background: var(--surface-raised); border: 1px solid var(--border); border-radius: 10px; padding: 10px 13px; }
+
+  .chart-legend { display: flex; gap: 12px; align-items: center; font-size: 10px; color: var(--text-secondary); flex-wrap: wrap; }
+  .chart-legend .item { display: inline-flex; align-items: center; gap: 4px; }
+  .chart-legend .sw { width: 9px; height: 9px; border-radius: 3px; flex-shrink: 0; }
+  svg text { font-family: "JetBrains Mono", monospace; fill: var(--text-secondary); }
+  svg text.lbl { font-family: "Public Sans", sans-serif; fill: var(--text-primary); font-weight: 600; }
+  .chart-box { flex: 1; min-height: 0; display: flex; }
+  .chart-box svg { display: block; }
+
+  .hero { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; flex: 1; gap: 16px; position: relative; }
+  .hero .kicker { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent-orange); font-weight: 700; }
+  .hero h1 { font-size: 36px; font-weight: 600; line-height: 1.08; max-width: 900px; }
+  .hero h1 em { font-style: normal; color: var(--accent-blue); }
+  .hero .desc { font-size: 14px; color: var(--text-secondary); max-width: 680px; line-height: 1.55; }
+  .hero-meta { display: flex; gap: 30px; margin-top: 4px; flex-wrap: wrap; }
+  .hero-meta .m-l { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); margin-bottom: 2px; }
+  .hero-meta .m-v { font-size: 13px; font-weight: 600; }
+  .hero-wave { position: absolute; right: 4px; top: 4px; opacity: .35; pointer-events: none; }
+
+  .agenda-row { display: flex; gap: 12px; flex-shrink: 0; padding-top: 16px; border-top: 1px solid var(--border); margin-top: 4px; }
+  .agenda-item { flex: 1; display: flex; align-items: flex-start; gap: 10px; background: var(--surface-raised); border: 1px solid var(--border); border-radius: 10px; padding: 11px 13px; }
+  .agenda-item.am { border-left: 3px solid var(--accent-blue); }
+  .agenda-item.ai { border-left: 3px solid var(--accent-orange); }
+  .agenda-item.ar { border-left: 3px solid var(--accent-aqua); }
+  .agenda-tag { font-family: "JetBrains Mono", monospace; font-size: 16px; font-weight: 600; color: var(--text-muted); line-height: 1; }
+  .agenda-t { font-family: "Fraunces", serif; font-size: 14.5px; font-weight: 600; margin-bottom: 3px; }
+  .agenda-s { font-size: 11px; color: var(--text-secondary); line-height: 1.4; }
+
+  .controls {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    width: 1280px; max-width: 100%; flex-shrink: 0;
+  }
+  .nav-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--surface); border: 1px solid var(--border); color: var(--text-primary);
+    font-family: "Public Sans", sans-serif; font-weight: 600; font-size: 12px;
+    padding: 7px 13px; border-radius: 9px; cursor: pointer; box-shadow: var(--shadow);
+  }
+  .nav-btn:hover { border-color: var(--border-strong); }
+  .nav-btn:disabled { opacity: .35; cursor: default; }
+  .nav-btn:focus-visible, .dot:focus-visible { outline: 2px solid var(--accent-blue); outline-offset: 2px; }
+  .nav-center { display: flex; align-items: center; gap: 12px; }
+  .dots { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; max-width: 640px; justify-content: center; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border-strong); border: none; cursor: pointer; padding: 0; }
+  .dot.is-active { background: var(--accent-blue); width: 15px; border-radius: 4px; }
+  .counter { font-family: "JetBrains Mono", monospace; font-size: 11.5px; color: var(--text-muted); min-width: 56px; text-align: center; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .slide.is-active { animation: fadeIn .2s ease; }
+  }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+</style>
+
+<div class="page">
+  <div class="deck-wrap">
+    <div class="scaler" id="scaler">
+      <div class="stage" id="stage">
+
+        <!-- 1: TITULO -->
+        <section class="slide is-active" data-section="intro">
+          <div class="hero">
+            <span class="kicker">Laboratorio 1 — Deep Learning</span>
+            <h1>Adaptando <em>TResNet-LA</em> del sonar submarino al canto de la selva amazónica</h1>
+            <p class="desc">Implementación y validación experimental del modelo de Chen et al. (2026) —diseñado para reconocer buques bajo interferencia acústica submarina— aplicado a la identificación multi-especie de 42 anuros amazónicos a partir de grabaciones de campo.</p>
+            <div class="hero-meta">
+              <div><div class="m-l">Paper base</div><div class="m-v">Chen, Luo, Zhou et al. — ESWA 2026</div></div>
+              <div><div class="m-l">Dataset</div><div class="m-v">INCT · 62 191 clips · 42 especies</div></div>
+              <div><div class="m-l">Experimentos</div><div class="m-v">10 arms · cross-site · MTD sintético</div></div>
+            </div>
+          </div>
+          <div class="agenda-row">
+            <div class="agenda-item am">
+              <span class="agenda-tag">01</span>
+              <div><div class="agenda-t">Metodología</div><div class="agenda-s">Slides 2-7 · el paper, la arquitectura, UABOS/MSW</div></div>
+            </div>
+            <div class="agenda-item ai">
+              <span class="agenda-tag">02</span>
+              <div><div class="agenda-t">Implementación</div><div class="agenda-s">Slides 8-14 · adaptación, bugs corregidos, pipeline</div></div>
+            </div>
+            <div class="agenda-item ar">
+              <span class="agenda-tag">03</span>
+              <div><div class="agenda-t">Resultados</div><div class="agenda-s">Slides 15-20 · 10 arms, ablaciones, cross-site</div></div>
+            </div>
+          </div>
+          <svg class="hero-wave" width="420" height="160" viewBox="0 0 420 160" aria-hidden="true">
+            <path d="M0,80 C35,25 70,135 105,80 C140,25 175,135 210,80 C245,25 280,135 315,80 C350,25 385,135 420,80" fill="none" stroke="var(--accent-blue)" stroke-width="2" opacity=".5"/>
+            <path d="M0,104 C35,64 70,144 105,104 C140,64 175,144 210,104 C245,64 280,144 315,104 C350,64 385,144 420,104" fill="none" stroke="var(--accent-orange)" stroke-width="2" opacity=".5"/>
+          </svg>
+        </section>
+
+        <!-- 2: PROBLEMA + TIR -->
+        <section class="slide" data-section="metodologia">
+          <div class="eyebrow-row"><span class="eyebrow"><span class="dot"></span>Metodología · 1/6</span><span class="slide-num mono">02</span></div>
+          <h2>El problema: reconocer <em>quién y cuántos</em>, bajo interferencia</h2>
+          <p class="sub">UAMTR — Underwater Acoustic Multi-Target Recognition (Chen et al. 2026)</p>
+          <div class="slide-body grid-2">
+            <div class="stack">
+              <div class="card" style="flex:1">
+                <span class="k">Planteo del paper</span>
+                <p style="margin-top:4px">La mayoría de trabajos en reconocimiento acústico submarino asume <b>un solo</b> blanco. En escenarios reales, varios buques emiten a la vez y hay señales de buques <b>no-objetivo</b> (interferencia) mezcladas. El paper reformula la tarea como <b>clasificación multi-etiqueta</b>: identificar tipo y cantidad de blancos presentes.</p>
+                <div class="k" style="margin-top:14px">Por qué reformular como multi-etiqueta</div>
+                <ul class="clean" style="margin-top:6px">
+                  <li>Antes: un blanco por muestra → clasificación simple (softmax, 1 clase gana)</li>
+                  <li>Ahora: vector binario de L etiquetas por muestra → cada clase decide independiente (sigmoid)</li>
+                  <li>El desbalance positivo/negativo domina el gradiente en multi-label → exige Asymmetric Loss (slide 6)</li>
+                </ul>
+              </div>
+              <div class="callout finding">Nuestra adaptación: el dataset de anuros ya viene mezclado por la naturaleza (varias especies cantando a la vez) — problema <b>estructuralmente idéntico</b>, pasamos de 3 a <b>42 clases</b>.</div>
+            </div>
+            <div class="card" id="tirDiagram" style="display:flex; flex-direction:column"></div>
+          </div>
+        </section>
+
+        <!-- 3: PREPROCESAMIENTO MEL -->
+        <section class="slide" data-section="metodologia">
+          <div class="eyebrow-row"><span class="eyebrow"><span class="dot"></span>Metodología · 2/6</span><span class="slide-num mono">03</span></div>
+          <h2>De la onda al mel-espectrograma</h2>
+          <p class="sub">Sección 5.1 — representación de entrada del modelo</p>
+          <div class="slide-body">
+            <div id="melPipeline" class="card" style="flex:1"></div>
+            <div class="grid-3">
+              <div class="stat-card"><div class="k">Ventana</div><p style="margin-top:4px; font-size:12px">Hanning 1024 pts, hop 320 — igual al paper</p></div>
+              <div class="stat-card"><div class="k">Bandas Mel</div><p style="margin-top:4px; font-size:12px">128 filtros, <b>fmax adaptado</b> al Nyquist real (11 025 Hz, no 14 000)</p></div>
+              <div class="stat-card"><div class="k">Salida</div><p style="margin-top:4px; font-size:12px">208×128, normalizada [0,1] por muestra</p></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 4: ARQUITECTURA GENERAL -->
+        <section class="slide" data-section="metodologia">
+          <div class="eyebrow-row"><span class="eyebrow"><span class="dot"></span>Metodología · 3/6</span><span class="slide-num mono">04</span></div>
+          <h2>Arquitectura TResNet-LA — vista completa</h2>
+          <p class="sub">TResNet-L + atención de canal final — Fig. 7, Tabla C1</p>
+          <div class="slide-body grid-2 wide-left">
+            <div id="archDiagram" class="card" style="display:flex; align-items:center; justify-content:center; padding:6px"></div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Etapa</th><th>Salida</th><th>Config</th></tr></thead>
+                <tbody>
+                  <tr><td class="txt">SpaceToDepth</td><td>125×32</td><td class="txt">block 4</td></tr>
+                  <tr><td class="txt">Stem Conv</td><td>125×32</td><td class="txt">1×1, 76</td></tr>
+                  <tr><td class="txt">Basic ×4 (SE r=4)</td><td>125×32</td><td class="txt">76 canales</td></tr>
+                  <tr><td class="txt">Basic ×5 (SE r=4)</td><td>63×16</td><td class="txt">152 canales</td></tr>
+                  <tr><td class="txt">Bottleneck ×18 (SE r=8)</td><td>32×8</td><td class="txt">304→1216</td></tr>
+                  <tr><td class="txt">Bottleneck ×3 (sin SE)</td><td>16×4</td><td class="txt">608→2432</td></tr>
+                  <tr><td class="txt"><b>SE final (r=16)</b></td><td>16×4</td><td class="txt">el "LA"</td></tr>
+                  <tr><td class="txt">GAP→FC→Sigmoid</td><td>1×42</td><td class="txt">multi-label</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- 5: BLOQUES BASIC/BOTTLENECK + SE -->
+        <section class="slide" data-section="metodologia">
+          <div class="eyebrow-row"><span class="eyebrow"><span class="dot"></span>Metodología · 4/6</span><span class="slide-num mono">05</span></div>
+          <h2>Dentro del bloque: dónde vive la atención de canal</h2>
+          <p class="sub">Fig. 7 (subplots) y Fig. 8 — el SE se inserta después de la conv 3×3, antes de la expansión</p>
+          <div class="slide-body row">
+            <div id="basicBlockDiagram" class="card"></div>
+            <div id="bottleneckBlockDiagram" class="card"></div>
+            <div class="stack" style="flex:.85">
+              <div class="card"><span class="k">BasicBlock (etapas 1-2)</span><p style="margin-top:4px">2× conv 3×3 + SE r=4. Se usa donde la resolución espacial es más alta.</p></div>
+              <div class="card"><span class="k">Bottleneck (etapas 3-4)</span><p style="margin-top:4px">1×1 → 3×3 → SE r=8 → 1×1 (expansión ×4). Reduce el costo de la conv cara.</p></div>
+              <div class="card"><span class="k">Squeeze-Excite-Scale</span><p style="margin-top:4px">GAP → 2 FC → sigmoid → reescala canal a canal (Ec. 14-16).</p></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 6: LOSS + METRICAS -->
+        <section class="slide" data-section="metodologia">
+          <div class="eyebrow-row"><span class="eyebrow"><span class="dot"></span>Metodología · 5/6</span><span class="slide-num mono">06</span></div>
+          <h2>Asymmetric Loss y las 6 métricas</h2>
+          <p class="sub">Ec. 14-23 — el desbalance es el hilo conductor del paper</p>
+          <div class="slide-body grid-2">
+            <div class="stack">
+              <div class="card">
+                <span class="k">Squeeze-and-Excitation (Ec. 14-16)</span>
+                <div class="formula" style="margin-top:5px">
+                  <span class="comment">// squeeze → excite → scale</span><br>
+                  z = (1/WH) Σ X(j,k) &nbsp; <span class="term">·</span> &nbsp; F = σ(W₂δ(W₁z)) &nbsp; <span class="term">·</span> &nbsp; X̂ = F·X
+                </div>
+              </div>
+              <div class="card">
+                <span class="k">Asymmetric Loss (γ_neg=6, γ_pos=0)</span>
+                <div class="formula" style="margin-top:5px">peso = (1−p<span style="font-size:8px;vertical-align:sub">t</span>)<span style="font-size:8px;vertical-align:super">γ</span> &nbsp; γ = γ<span style="font-size:8px;vertical-align:sub">pos</span>y + γ<span style="font-size:8px;vertical-align:sub">neg</span>(1−y)</div>
+                <p style="margin-top:5px">Los negativos fáciles (mayoría en multi-label) se aplastan en el gradiente; los positivos no pierden peso.</p>
+              </div>
+            </div>
+            <div class="card" style="flex:1">
+              <span class="k">6 métricas (Ec. 17-23)</span>
+              <ul class="clean" style="margin-top:6px">
+                <li><b>global_acc</b> — exact match: acierta el vector completo (estricta)</li>
+                <li><b>macro_acc / precision / recall / F1</b> — promedio por clase, todas pesan igual</li>
+                <li><b>mAP</b> — usa las probabilidades, independiente del umbral</li>
+              </ul>
+              <div class="row" style="margin-top:12px">
+                <div class="card" style="background:var(--surface-sunken)">
+                  <span class="k">Sample-based (Sec. 5.1)</span>
+                  <p style="margin-top:4px; font-size:12px">Compara el vector completo Yᵢ vs Zᵢ — evalúa a nivel de dataset. Es <b>global_acc</b>.</p>
+                </div>
+                <div class="card" style="background:var(--surface-sunken)">
+                  <span class="k">Label-based (Sec. 5.1)</span>
+                  <p style="margin-top:4px; font-size:12px">Evalúa cada especie por separado y promedia. Son <b>macro_acc, P, R, F1, mAP</b>.</p>
+                </div>
+              </div>
+              <div class="callout warn" style="margin-top:12px">Con 42 clases y 36% de clips vacíos, global_acc/macro_acc se inflan por verdaderos negativos — F1 y mAP son las métricas honestas.</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 7: UABOS + MSW -->
+        <section class="slide" data-section="metodologia">
+          <div class="eyebrow-row"><span class="eyebrow"><span class="dot"></span>Metodología · 6/6</span><span class="slide-num mono">07</span></div>
+          <h2>Resampling: UABOS y MSW</h2>
+          <p class="sub">Algoritmo 2, Ec. 11-13 — las dos estrategias del paper contra el desbalance</p>
+          <div class="slide-body row">
+            <div id="uabosDiagram" class="card"></div>
+            <div id="mswDiagram" class="card"></div>
+          </div>
+        </section>
+
+        <!-- 8: ADAPTACION AL DATASET -->
+        <section class="slide" data-section="implementacion">
+          <div class="eyebrow-row"><span class="eyebrow"><span class="dot"></span>Implementación · 1/7</span><span class="slide-num mono">08</span></div>
+          <h2>Adaptación al dataset: cada decisión, justificada</h2>
+          <p class="sub">ShipsEar (barcos, sintético) → INCT (anuros, grabaciones de campo reales)</p>
+          <div class="slide-body">
+            <div class="table-wrap spacious">
+              <table>
+                <thead><tr><th class="txt">Parámetro</th><th class="txt">Paper</th><th class="txt">Nuestro</th><th class="txt">Justificación</th></tr></thead>
+                <tbody>
+                  <tr><td class="txt">Clases</td><td>3 (barco)</td><td>42 (anuro)</td><td class="txt">requisito de la consigna</td></tr>
+                  <tr><td class="txt">Sample rate</td><td>32 000 Hz</td><td class="txt best">22 050 Hz</td><td class="txt">Nyquist real (nativo 22.05kHz); ShipsEar es ~52.7kHz nativo</td></tr>
+                  <tr><td class="txt">fmax Mel</td><td>14 000 Hz</td><td class="txt best">11 025 Hz</td><td class="txt">= Nyquist; evita bandas Mel sin señal real</td></tr>
+                  <tr><td class="txt">Duración del clip</td><td>5.0 s</td><td>3.0 s</td><td class="txt">duración real de los .wav del dataset</td></tr>
+                  <tr><td class="txt">Split</td><td>70/15/15</td><td class="txt best">80/20, seed 42</td><td class="txt">requisito de la consigna</td></tr>
+                  <tr><td class="txt">Umbral σ</td><td>0.8</td><td>0.8</td><td class="txt">confirmado en Apéndice B (pág. 19)</td></tr>
+                  <tr><td class="txt">Optimizador / LR</td><td>AdamW, 1e-4</td><td>AdamW, 1e-4</td><td class="txt">igual al paper (Tabla C2)</td></tr>
+                  <tr><td class="txt">Early stopping</td><td class="txt">no (80 épocas fijas)</td><td class="txt best">no, en los 10 arms</td><td class="txt">comparación justa entre arms (ver bug #2, slide 10)</td></tr>
+                  <tr><td class="txt">Métrica de checkpoint</td><td class="txt">no especifica</td><td class="txt best">mAP</td><td class="txt">global_acc se infla con negativos (slide 6)</td></tr>
+                  <tr><td class="txt">Stem Conv1</td><td class="txt">1×1 (Fig.1/Fig.7)</td><td>1×1</td><td class="txt">Tabla C1 texto decía 3×3 — inconsistente; resuelto leyendo el PDF como imagen</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="callout finding">Estructuralmente el problema es idéntico. Lo que cambia es el dominio y la escala del desbalance — mucho más extrema en 42 especies que en 3 tipos de barco.</div>
+          </div>
+        </section>
+
+        <!-- 9: BUG NaN -->
+        <section class="slide" data-section="implementacion">
+          <div class="eyebrow-row"><span class="eyebrow"><span class="dot"></span>Implementación · 2/7</span><span class="slide-num mono">09</span></div>
+          <h2>Bug #1: la pérdida daba <span style="color:var(--status-critical)">NaN</span></h2>
+          <p class="sub">Precisión mixta (fp16) + logaritmo de una probabilidad casi-cero</p>
+          <div class="slide-body">
+            <div id="nanBugDiagram" class="card" style="flex:1"></div>
+            <div class="grid-3">
+              <div class="stat-card"><div class="k">Causa</div><p style="margin-top:4px; font-size:12px">Autocast usa fp16; log(p≈0) pierde precisión y diverge a NaN</p></div>
+              <div class="stat-card"><div class="k">Fix</div><code class="snip" style="margin-top:4px">logits = logits.float()</code></div>
+              <div class="stat-card"><div class="k">Verificado</div><p style="margin-top:4px; font-size:12px">val_loss: <span style="color:var(--status-critical)">NaN</span> → <span class="best">0.14</span> (finito)</p></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 10: BUG ABLACION -->
+        <section class="slide" data-section="implementacion">
+          <div class="eyebrow-row"><span class="eyebrow"><span class="dot"></span>Implementación · 3/7</span><span class="slide-num mono">10</span></div>
+          <h2>Bug #2: la ablación comparaba épocas distintas</h2>
+          <p class="sub">Early stopping cortaba a con_SE mucho antes que a sin_SE — invalidaba la comparación</p>
+          <div class="slide-body">
+            <div id="ablationBugDiagram" class="card" style="flex:1"></div>
+            <div class="row" style="flex-shrink:0">
+              <div class="card"><span class="k">Bug #3 — SpecAugment duplicado</span><p style="margin-top:4px; font-size:12px">Workers del DataLoader sin seed propio de numpy → mismo aumento en paralelo. Fix: <code style="font-size:10.5px">worker_init_fn</code> + cudnn determinista.</p></div>
+              <div class="card"><span class="k">Bug #4 — checkpoint sesgado</span><p style="margin-top:4px; font-size:12px">Mejor modelo elegido por global_acc, inflado por negativos. Fix: selección por <b>mAP</b>.</p></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 11: FIDELIDAD ARQUITECTONICA -->
+        <section class="slide" data-section="implementacion">
+          <div class="eyebrow-row"><span class="eyebrow"><span class="dot"></span>Implementación · 4/7</span><span class="slide-num mono">11</span></div>
+          <h2>Fidelidad arquitectónica: de 15M a 53.1M parámetros</h2>
+          <p class="sub">El modelo original tenía los bloques Bottleneck a media anchura</p>
+          <div class="slide-body grid-2">
+            <div id="paramsChart" class="card"></div>
+            <div class="stack">
+              <div class="card">
+                <span class="k">El error</span>
+                <p style="margin-top:4px">Multiplicadores de ancho incorrectos (×2/×4 en vez de <b>1,2,4,8</b> de la Tabla C1) → ~15M parámetros, un TResNet-L "achicado".</p>
+              </div>
+              <div class="card">
+                <span class="k">Cómo se verificó</span>
+                <p style="margin-top:4px"><code style="font-size:10.5px">pypdf</code> rompe las matrices con corchetes de la Tabla C1 al extraer texto. Se instaló <code style="font-size:10.5px">poppler-utils</code> y se releyeron las 25 páginas <b>como imágenes</b> — confirmó anchos, posición del SE, y el stem 1×1.</p>
+              </div>
+              <div class="card" style="flex:1">
+                <span class="k">Qué NO cambió (ya estaba bien)</span>
+                <ul class="clean aqua" style="margin-top:6px">
+                  <li>Profundidad por etapa [4, 5, 18, 3] — correcta desde el original</li>
+                  <li>Downsampling avgpool 2×2 stride 2 — coincide exacto con Tabla C1</li>
+                  <li>Reducción SE r=4/8/16 por etapa — coincide con Fig. 7</li>
+                  <li>Solo la <b>anchura</b> de canales estaba mal — un solo parámetro, gran impacto</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 12: DESBALANCE DATASET -->
+        <section class="slide" data-section="implementacion">
+          <div class="eyebrow-row"><span class="eyebrow"><span class="dot"></span>Implementación · 5/7</span><span class="slide-num mono">12</span></div>
+          <h2>El desbalance real: de 13 258 a 0 muestras</h2>
+          <p class="sub">42 especies, train.csv completo (62 191 clips) — motiva UABOS/MSW en Resultados</p>
+          <div class="slide-body">
+            <div id="imbalanceChart" class="card" style="flex:1"></div>
+            <div class="grid-3">
+              <div class="stat-card"><div class="k">Clases con 0 positivos</div><div class="stat crit" style="margin-top:2px"><div class="v">2</div><div class="l">SCIFUS, SCINAS</div></div></div>
+              <div class="stat-card"><div class="k">Clips sin ninguna especie</div><div class="stat orange" style="margin-top:2px"><div class="v">36%</div><div class="l">22 504 / 62 191</div></div></div>
+              <div class="stat-card"><div class="k">Ratio máx/mín (con positivos)</div><div class="stat crit" style="margin-top:2px"><div class="v">~1900:1</div><div class="l">SPHSUR vs LEPFLA</div></div></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 13: CODIGO NUEVO -->
+        <section class="slide" data-section="implementacion">
+          <div class="eyebrow-row"><span class="eyebrow"><span class="dot"></span>Implementación · 6/7</span><span class="slide-num mono">13</span></div>
+          <h2>6 módulos nuevos para cubrir lo que faltaba del paper</h2>
+          <p class="sub">La primera versión no tenía resampling, baselines, ni análisis de generalización</p>
+          <div class="slide-body grid-2 wide-left">
+            <div class="table-wrap spacious">
+              <table>
+                <thead><tr><th class="txt">Archivo</th><th class="txt">Qué implementa</th></tr></thead>
+                <tbody>
+                  <tr><td class="txt mono">resampling.py</td><td class="txt">UABOS (t-SNE + kNN, Ec. 11-13) y MSW (peso por clase)</td></tr>
+                  <tr><td class="txt mono">baselines.py</td><td class="txt">ResNet50, ResNet50-A, TResNet-M (3,4,11,3), TResNet-MA</td></tr>
+                  <tr><td class="txt mono">experiments.py</td><td class="txt">orquestador: 10 arms, mismo split/seed, 80 épocas</td></tr>
+                  <tr><td class="txt mono">cross_site.py</td><td class="txt">leave-one-site-out × 4 (análogo DeepShip, Ap. D)</td></tr>
+                  <tr><td class="txt mono">mtd_synth.py</td><td class="txt">MTD sintético: mezcla clips a TIR controlado (análogo Alg. 1)</td></tr>
+                  <tr><td class="txt mono">balance_metrics.py</td><td class="txt">Ec. 1-10 (LCard, MeanIR, LP_MeanIR…) — Tabla 3</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="stack">
+              <code class="snip"><span class="cm"># resampling.py — UABOS, Ec. 13</span>
+gamma_i = (N_bar - N_j) / (
+    n_ds_j * sum_deficit)
+n_clones = floor(
+    sum_deficit * p * gamma)
+
+<span class="cm"># experiments.py — 10 arms</span>
+<span class="kw">for</span> arm <span class="kw">in</span> ARMS:
+    set_seed(42)
+    model = build(arm.use_se)
+    train_model(..., epochs=80,
+      ckpt_metric=<span class="kw">"mAP"</span>)</code>
+              <code class="snip"><span class="cm"># cross_site.py — leave-one-site-out</span>
+<span class="kw">for</span> held_out <span class="kw">in</span> SITES:
+    train_df = df[sites != held_out]
+    test_df  = df[sites == held_out]
+    set_seed(42)
+    model = build_model(use_se=<span class="kw">True</span>)
+    train_model(model, train_df,
+      epochs=80, ckpt_metric=<span class="kw">"mAP"</span>)
+    evaluate(model, test_df)  <span class="cm"># nunca visto</span></code>
+            </div>
+          </div>
+        </section>
+
+        <!-- 14: PIPELINE -->
+        <section class="slide" data-section="implementacion">
+          <div class="eyebrow-row"><span class="eyebrow"><span class="dot"></span>Implementación · 7/7</span><span class="slide-num mono">14</span></div>
+          <h2>El pipeline completo: 5 etapas, ~22.5 horas de GPU</h2>
+          <p class="sub">RTX PRO 4000 Blackwell · <code style="font-size:11px">run_all.sh</code></p>
+          <div class="slide-body">
+            <div id="pipelineDiagram" class="card" style="padding:14px 10px"></div>
+            <div class="grid-3">
+              <div class="stat-card"><span class="k">Cache de espectrogramas</span><p style="margin-top:4px; font-size:12px">62 191 mel-specs, 344 ms/archivo con librosa → cache <code style="font-size:10.5px">.npy</code> obligatorio (16 workers, ~22 min)</p></div>
+              <div class="stat-card"><span class="k">10 arms + 4 sitios</span><p style="margin-top:4px; font-size:12px">14 entrenamientos completos de 80 épocas, mismo split/seed 42, sin early stopping</p></div>
+              <div class="stat-card"><span class="k">Reproducibilidad</span><p style="margin-top:4px; font-size:12px">snapshot por época, cudnn determinista — época 1 idéntica entre corridas</p></div>
+            </div>
+            <div class="grid-3" style="flex:1">
+              <div class="stat-card"><span class="k">GPU</span><p style="margin-top:4px; font-size:12px">RTX PRO 4000 Blackwell, 16 GB — el modelo de 53M usa ~2-4 GB, ~90-300 s/época</p></div>
+              <div class="stat-card"><span class="k">Entorno</span><p style="margin-top:4px; font-size:12px">Python 3.12, torch 2.14+cu130, librosa, openTSNE, torchvision</p></div>
+              <div class="stat-card"><span class="k">Ejecución</span><p style="margin-top:4px; font-size:12px">corrió de punta a punta sin intervención — de madrugada a la noche siguiente</p></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 15: TABLA 10 ARMS -->
+        <section class="slide" data-section="resultados">
+          <div class="eyebrow-row"><span class="eyebrow"><span class="dot"></span>Resultados · 1/6</span><span class="slide-num mono">15</span></div>
+          <h2>10 arms, mismo split y semilla, 80 épocas cada uno</h2>
+          <p class="sub">Mejor checkpoint por mAP · <span class="best">verde</span> = mejor de la columna</p>
+          <div class="slide-body">
+            <div class="table-wrap">
+              <table id="armsTable">
+                <thead><tr><th class="txt">Modelo</th><th class="txt">Resample</th><th>Params</th><th>global_acc</th><th>F1</th><th>mAP</th><th>ep.</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+            <div class="grid-3">
+              <div class="stat aqua"><div class="v">97.15</div><div class="l">mejor mAP — TResNet-LA</div></div>
+              <div class="stat blue"><div class="v">89.23</div><div class="l">mejor F1 — ResNet50</div></div>
+              <div class="stat orange"><div class="v">90.52</div><div class="l">mejor global_acc — TResNet-L+MSW</div></div>
+            </div>
+            <div id="armsChart" class="card" style="flex:1"></div>
+          </div>
+        </section>
+
+        <!-- 16: ABLACION SE -->
+        <section class="slide" data-section="resultados">
+          <div class="eyebrow-row"><span class="eyebrow"><span class="dot"></span>Resultados · 2/6</span><span class="slide-num mono">16</span></div>
+          <h2>Ablación del SE: solo ayuda en el backbone grande</h2>
+          <p class="sub">Mismo split/semilla/hiperparámetros — única diferencia: <code style="font-size:11px">use_se</code></p>
+          <div class="slide-body grid-2">
+            <div id="ablationChart" class="card"></div>
+            <div class="stack">
+              <div class="callout finding"><b>TResNet-L → TResNet-LA</b> (53M params): SE mejora las 3 métricas (+0.74 acc / +1.44 F1 / +0.07 mAP).</div>
+              <div class="callout warn"><b>ResNet50→-A</b> y <b>TResNet-M→-MA</b> (24-40M): el SE <b>no ayuda o empeora</b> (hasta −0.81 F1).</div>
+              <p>Matiza al paper: ahí el SE "consistentemente" mejora. Acá el beneficio depende de la capacidad del backbone.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- 17: RESAMPLING -->
+        <section class="slide" data-section="resultados">
+          <div class="eyebrow-row"><span class="eyebrow"><span class="dot"></span>Resultados · 3/6</span><span class="slide-num mono">17</span></div>
+          <h2>Resampling: ayuda al modelo débil, no al fuerte</h2>
+          <p class="sub">Replica un hallazgo textual del paper (Sección 5.4), en un dominio distinto</p>
+          <div class="slide-body grid-2">
+            <div id="resamplingChart" class="card"></div>
+            <div class="stack">
+              <div class="callout quote">"El modelo TResNet-L es menos capaz de extraer features discriminativas... el resampling da beneficios medibles a pesar de sus limitaciones" — Sección 5.4</div>
+              <div class="card">
+                <span class="k">Balance del dataset (Ec. 1-10 → Tabla 3)</span>
+                <table style="margin-top:5px">
+                  <thead><tr><th class="txt"></th><th>LP_MeanIR</th><th>LP_CVIR</th></tr></thead>
+                  <tbody>
+                    <tr><td class="txt">train (80%)</td><td>4650.7</td><td>1.15</td></tr>
+                    <tr><td class="txt">+ MSW</td><td>1913.5</td><td>1.44</td></tr>
+                    <tr><td class="txt hi">+ UABOS</td><td class="best">258.7</td><td class="best">0.26</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 18: MTD/TIR SINTETICO -->
+        <section class="slide" data-section="resultados">
+          <div class="eyebrow-row"><span class="eyebrow"><span class="dot"></span>Resultados · 4/6</span><span class="slide-num mono">18</span></div>
+          <h2>Análogo MTD/TIR: mezclas sintéticas a razón controlada</h2>
+          <p class="sub">Algoritmo 1 adaptado — inferencia pura con el checkpoint de TResNet-LA</p>
+          <div class="slide-body grid-2">
+            <div id="mtdMixDiagram" class="card"></div>
+            <div class="row">
+              <div id="tirChart" class="card"></div>
+              <div id="kChart" class="card"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 19: CROSS-SITE -->
+        <section class="slide" data-section="resultados">
+          <div class="eyebrow-row"><span class="eyebrow"><span class="dot"></span>Resultados · 5/6</span><span class="slide-num mono">19</span></div>
+          <h2>Generalización cross-sitio: el colapso honesto</h2>
+          <p class="sub">Leave-one-site-out × 4 — análogo al Apéndice D (DeepShip) del paper</p>
+          <div class="slide-body">
+            <div class="row" style="flex:0 0 128px">
+              <div id="leaveOneOutDiagram" class="card"></div>
+            </div>
+            <div id="crossSiteChart" class="card" style="flex:1; min-height:0"></div>
+            <div class="callout warn" style="flex-shrink:0"><b>mAP 97→17 en promedio</b> (F1→1.55) en el sitio nunca visto. El modelo aprende ruido de fondo del sitio, no solo el canto — no está listo para desplegarse en un sitio nuevo sin reentrenar.</div>
+          </div>
+        </section>
+
+        <!-- 20: UMBRAL + CONCLUSIONES -->
+        <section class="slide" data-section="resultados">
+          <div class="eyebrow-row"><span class="eyebrow"><span class="dot"></span>Resultados · 6/6</span><span class="slide-num mono">20</span></div>
+          <h2>Umbral, errores y comparación final</h2>
+          <p class="sub">σ=0.8 del paper resulta casi óptimo — y mejoramos las 3 métricas frente a la primera iteración</p>
+          <div class="slide-body grid-2">
+            <div id="thresholdChart" class="card"></div>
+            <div class="stack">
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th class="txt"></th><th class="txt">Primera iteración (15M)</th><th class="txt">Versión final (53M)</th></tr></thead>
+                  <tbody>
+                    <tr><td class="txt">global_acc</td><td>88.76</td><td class="best">90.28</td></tr>
+                    <tr><td class="txt">mAP</td><td>94.81</td><td class="best">97.15</td></tr>
+                    <tr><td class="txt">F1</td><td>85.72</td><td class="best">87.34</td></tr>
+                    <tr><td class="txt">loss</td><td class="txt" style="color:var(--status-critical)">NaN (bug)</td><td class="best">0.14</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="callout finding">Peor F1 por soporte mínimo (LEPFLA n=1, RHIORN n=4) — ruido estadístico. Más errores absolutos en las clases más comunes (SPHSUR, BOABIS) — efecto de volumen, no peor reconocimiento relativo.</div>
+              <div class="card" style="flex:1">
+                <span class="k">Top errores absolutos (20% val)</span>
+                <p style="margin-top:6px; font-size:11.5px"><b style="color:var(--status-critical)">Falsos positivos:</b> LEPLAT (80), BOABIS (77), SPHSUR (55), PHYALB (43), DENNAN (35)</p>
+                <p style="margin-top:4px; font-size:11.5px"><b style="color:var(--accent-orange)">Falsos negativos:</b> SPHSUR (77), BOABIS (73), LEPLAT (70), DENMIN (61), PHYALB (60)</p>
+                <p style="margin-top:8px; font-size:11px; color:var(--text-muted)">Mismas 4-5 especies en ambas listas: son las más comunes del dataset, no las peor reconocidas proporcionalmente.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </div>
+  </div>
+
+  <nav class="controls" aria-label="Navegación de diapositivas">
+    <button class="nav-btn" id="prevBtn" aria-label="Diapositiva anterior">← Anterior</button>
+    <div class="nav-center">
+      <div class="dots" id="dots" role="tablist" aria-label="Ir a diapositiva"></div>
+      <div class="counter" id="counter">01 / 20</div>
+    </div>
+    <button class="nav-btn" id="nextBtn" aria-label="Siguiente diapositiva">Siguiente →</button>
+  </nav>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var SVGNS = "http://www.w3.org/2000/svg";
+  function el(tag, attrs, parent) {
+    var e = document.createElementNS(SVGNS, tag);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+  function svgRoot(container, w, h) {
+    container.innerHTML = "";
+    var s = el("svg", { viewBox: "0 0 " + w + " " + h, width: "100%", height: "100%", preserveAspectRatio: "xMidYMid meet" });
+    container.appendChild(s);
+    return s;
+  }
+  /* Measures the REAL rendered size of a chart container (works even on
+     inactive slides because .slide uses visibility:hidden, not display:none
+     -- display:none would report 0x0 here) so every chart's viewBox exactly
+     matches its box: no letterboxing, no blank margins. */
+  function measure(container, fw, fh) {
+    var w = container.clientWidth, h = container.clientHeight;
+    return [w || fw, h || fh];
+  }
+  function cssVar(name) { return getComputedStyle(document.body).getPropertyValue(name).trim(); }
+  function text(parent, x, y, str, attrs) {
+    var t = el("text", Object.assign({ x: x, y: y }, attrs || {}), parent);
+    t.textContent = str;
+    return t;
+  }
+  function titleTip(parent, str) { var t = el("title", {}, parent); t.textContent = str; return t; }
+  function arrowMarker(s, id) {
+    var defs = el("defs", {}, s);
+    var m = el("marker", { id: id, viewBox: "0 0 8 8", refX: 7, refY: 4, markerWidth: 6, markerHeight: 6, orient: "auto-start-reverse" }, defs);
+    el("path", { d: "M0,0 L8,4 L0,8 z", fill: cssVar("--border-strong") }, m);
+  }
+  function box(s, x, y, w, h, label, sub, color, soft) {
+    el("rect", { x: x, y: y, width: w, height: h, rx: 7, fill: soft, stroke: color, "stroke-width": 1.2 }, s);
+    text(s, x + w / 2, y + (sub ? h / 2 - 3 : h / 2 + 4), label, { class: "lbl", "text-anchor": "middle", "font-size": "10.5" });
+    if (sub) text(s, x + w / 2, y + h / 2 + 12, sub, { "text-anchor": "middle", "font-size": "9", fill: color });
+  }
+  function colorFor(c) { return c === "orange" ? cssVar("--accent-orange") : c === "aqua" ? cssVar("--accent-aqua") : c === "crit" ? cssVar("--status-critical") : c === "good" ? cssVar("--status-good") : cssVar("--accent-blue"); }
+  function softFor(c) { return c === "orange" ? cssVar("--accent-orange-soft") : c === "aqua" ? cssVar("--accent-aqua-soft") : c === "crit" ? cssVar("--status-critical-soft") : c === "good" ? cssVar("--status-good-soft") : cssVar("--accent-blue-soft"); }
+
+  /* ---- generic flow diagram: vertical or horizontal chain of boxes, ----
+     fills the measured container exactly (box/gap sizes are derived from
+     the real available space, not fixed literals) ---- */
+  function renderFlow(container, opts) {
+    var wh = measure(container, opts.w, opts.h);
+    var w = wh[0], h = wh[1];
+    var s = svgRoot(container, w, h);
+    var titleH = opts.title ? 20 : 4;
+    if (opts.title) text(s, 4, 14, opts.title, { class: "lbl", "font-size": "11" });
+    arrowMarker(s, "arrow-" + container.id);
+    var n = opts.steps.length;
+    var gapFrac = opts.gapFrac || 0.24;
+    if (opts.dir === "v") {
+      var avail = h - titleH - 4;
+      var unit = avail / (n + (n - 1) * gapFrac);
+      var boxH = unit, gap = unit * gapFrac;
+      var boxW = (opts.boxWFrac || 0.86) * w;
+      var cx = (w - boxW) / 2;
+      opts.steps.forEach(function (st, i) {
+        var y = titleH + i * (boxH + gap);
+        box(s, cx, y, boxW, boxH, st.l, st.d, colorFor(st.c), softFor(st.c));
+        if (i < n - 1) el("line", { x1: w / 2, y1: y + boxH, x2: w / 2, y2: y + boxH + gap, stroke: cssVar("--border-strong"), "stroke-width": 1.4, "marker-end": "url(#arrow-" + container.id + ")" }, s);
+      });
+    } else {
+      var availW = w - 8;
+      var unitW = availW / (n + (n - 1) * gapFrac);
+      var boxW2 = unitW, gap2 = unitW * gapFrac;
+      var boxH2 = (opts.boxHFrac || 0.78) * (h - titleH);
+      var cy = titleH + (h - titleH - boxH2) / 2;
+      opts.steps.forEach(function (st, i) {
+        var x = 4 + i * (boxW2 + gap2);
+        box(s, x, cy, boxW2, boxH2, st.l, st.d, colorFor(st.c), softFor(st.c));
+        if (i < n - 1) el("line", { x1: x + boxW2, y1: cy + boxH2 / 2, x2: x + boxW2 + gap2, y2: cy + boxH2 / 2, stroke: cssVar("--border-strong"), "stroke-width": 1.4, "marker-end": "url(#arrow-" + container.id + ")" }, s);
+      });
+    }
+  }
+
+  /* ---- TIR concept diagram (slide 2) ---- */
+  function renderTirDiagram(container) {
+    var wh = measure(container, 460, 300); var w = wh[0], h = wh[1];
+    var s = svgRoot(container, w, h);
+    text(s, w / 2, 15, "TIR = 20·log₁₀(rmsₒᵦⱼₑₜᵢᵥₒ / rmsᵢₙₜₑᵣferencia)", { "text-anchor": "middle", "font-size": "10.5", class: "lbl" });
+    function wavePath(amp, freq, phase, yBase) {
+      var d = "M0," + yBase;
+      for (var x = 0; x <= w; x += 4) {
+        var y = yBase + amp * Math.sin((x / w) * freq * Math.PI * 2 + phase);
+        d += " L" + x + "," + y.toFixed(1);
+      }
+      return d;
+    }
+    var yBase = h * 0.27, amp1 = h * 0.10, amp2 = h * 0.05;
+    el("path", { d: wavePath(amp1, 6, 0, yBase), fill: "none", stroke: cssVar("--accent-blue"), "stroke-width": 2 }, s);
+    el("path", { d: wavePath(amp2, 17, 1.3, yBase), fill: "none", stroke: cssVar("--accent-orange"), "stroke-width": 1.6, opacity: .85 }, s);
+    text(s, 6, yBase - amp1 - 12, "objetivo", { fill: cssVar("--accent-blue"), "font-size": "10", "font-weight": "700" });
+    text(s, 6, yBase + amp1 + 18, "interferencia", { fill: cssVar("--accent-orange"), "font-size": "10", "font-weight": "700" });
+    var sepY = h * 0.5;
+    el("line", { x1: 0, y1: sepY, x2: w, y2: sepY, stroke: cssVar("--border") }, s);
+    var barY = h * 0.6;
+    text(s, 6, barY - 8, "TIR bajo (enmascarado)", { "font-size": "9.5", fill: cssVar("--text-muted") });
+    text(s, w - 6, barY - 8, "TIR alto (claro)", { "text-anchor": "end", "font-size": "9.5", fill: cssVar("--text-muted") });
+    var grad = el("defs", {}, s);
+    var lg = el("linearGradient", { id: "tirGrad", x1: "0", x2: "1", y1: "0", y2: "0" }, grad);
+    el("stop", { offset: "0%", "stop-color": cssVar("--status-critical") }, lg);
+    el("stop", { offset: "100%", "stop-color": cssVar("--status-good") }, lg);
+    el("rect", { x: 0, y: barY, width: w, height: 14, rx: 7, fill: "url(#tirGrad)" }, s);
+    text(s, w / 2, h - 34, "Nuestro dataset: sin TIR controlado — se sintetiza", { "text-anchor": "middle", "font-size": "10", fill: cssVar("--text-secondary") });
+    text(s, w / 2, h - 16, "en el análogo MTD (Resultados, slide 18)", { "text-anchor": "middle", "font-size": "10", fill: cssVar("--text-secondary") });
+  }
+
+  /* ---- Mel-spectrogram pipeline (slide 3) ---- */
+  function renderMelPipeline(container) {
+    renderFlow(container, {
+      w: 1190, h: 150, dir: "h",
+      steps: [
+        { l: "Audio .wav", d: "22 050 Hz, mono", c: "blue" },
+        { l: "Ventana Hann", d: "1024 pts, hop 320", c: "blue" },
+        { l: "STFT", d: "espectro de potencia", c: "aqua" },
+        { l: "Filtros Mel", d: "128 bandas, 0–11 025 Hz", c: "aqua" },
+        { l: "log(dB) + norm", d: "escala [0,1]", c: "orange" },
+        { l: "Mel-spec", d: "208×128×1", c: "orange" }
+      ]
+    });
+  }
+
+  /* ---- Architecture flow diagram (slide 4) ---- */
+  function renderArchDiagram(container) {
+    renderFlow(container, {
+      w: 300, h: 640, dir: "v", boxWFrac: 0.9,
+      steps: [
+        { l: "Mel-spec", d: "208×128×1", c: "blue" },
+        { l: "SpaceToDepth", d: "125×32×16", c: "blue" },
+        { l: "Basic ×4 (SE r4)", d: "76ch", c: "aqua" },
+        { l: "Basic ×5 (SE r4)", d: "152ch", c: "aqua" },
+        { l: "Bottleneck ×18 (SE r8)", d: "304→1216ch", c: "aqua" },
+        { l: "Bottleneck ×3", d: "608→2432ch", c: "blue" },
+        { l: "SE final (r16)", d: "el “LA”", c: "orange" },
+        { l: "GAP→FC→Sigmoid", d: "42 clases", c: "blue" }
+      ]
+    });
+  }
+
+  /* ---- Basic / Bottleneck block diagrams with skip connection (slide 5) ---- */
+  function renderResidualBlock(container, opts) {
+    var wh = measure(container, 280, 300); var w = wh[0], h = wh[1];
+    var s = svgRoot(container, w, h);
+    text(s, w / 2, 15, opts.title, { "text-anchor": "middle", class: "lbl", "font-size": "12" });
+    arrowMarker(s, "arrow-" + container.id);
+    var n = opts.steps.length;
+    var top = 24, bottomReserve = 42;
+    var avail = h - top - bottomReserve;
+    var gapFrac = 0.3;
+    var unit = avail / (n + (n - 1) * gapFrac);
+    var boxH = unit, gap = unit * gapFrac;
+    var boxW = w * 0.62, cx = w / 2 - boxW / 2;
+    opts.steps.forEach(function (st, i) {
+      var y = top + i * (boxH + gap);
+      var isSE = st.se;
+      var color = isSE ? cssVar("--accent-orange") : cssVar("--accent-blue");
+      var soft = isSE ? cssVar("--accent-orange-soft") : cssVar("--accent-blue-soft");
+      el("rect", { x: cx, y: y, width: boxW, height: boxH, rx: 6, fill: soft, stroke: color, "stroke-width": isSE ? 1.6 : 1, "stroke-dasharray": isSE ? "3 2" : "none" }, s);
+      text(s, cx + boxW / 2, y + boxH / 2 + 4, st.l, { "text-anchor": "middle", "font-size": "10", class: "lbl" });
+      if (i < n - 1) el("line", { x1: w / 2, y1: y + boxH, x2: w / 2, y2: y + boxH + gap, stroke: cssVar("--border-strong"), "stroke-width": 1.3, "marker-end": "url(#arrow-" + container.id + ")" }, s);
+    });
+    var lastY = top + n * (boxH + gap) - gap;
+    var plusY = lastY + bottomReserve * 0.52;
+    el("circle", { cx: w / 2, cy: plusY, r: 11, fill: "none", stroke: cssVar("--text-secondary"), "stroke-width": 1.4 }, s);
+    text(s, w / 2, plusY + 4, "+", { "text-anchor": "middle", "font-size": "13", fill: cssVar("--text-secondary"), "font-weight": "700" });
+    el("line", { x1: w / 2, y1: lastY, x2: w / 2, y2: plusY - 11, stroke: cssVar("--border-strong"), "stroke-width": 1.3, "marker-end": "url(#arrow-" + container.id + ")" }, s);
+    var skipX = cx * 0.32;
+    el("path", { d: "M" + cx + "," + (top + 8) + " L" + skipX + "," + (top + 8) + " L" + skipX + "," + plusY + " L" + (w / 2 - 11) + "," + plusY, fill: "none", stroke: cssVar("--text-muted"), "stroke-width": 1.3, "stroke-dasharray": "3 2", "marker-end": "url(#arrow-" + container.id + ")" }, s);
+    text(s, skipX - 4, top - 2, "identity", { "font-size": "9", fill: cssVar("--text-muted") });
+    text(s, w / 2, h - 8, "ReLU → salida", { "text-anchor": "middle", "font-size": "10", fill: cssVar("--text-secondary") });
+  }
+
+  /* ---- NaN bug flow diagram (slide 9) ---- */
+  function renderNanBug(container) {
+    var wh = measure(container, 1190, 190); var w = wh[0], h = wh[1];
+    var s = svgRoot(container, w, h);
+    arrowMarker(s, "arrow-nan1"); arrowMarker(s, "arrow-nan2");
+    var margin = 20, n = 3, gapFrac = 0.16;
+    var unitW = (w - margin * 2) / (n + (n - 1) * gapFrac);
+    var boxW = unitW, gap = unitW * gapFrac;
+    var rowGap = h * 0.16;
+    var boxH = (h - rowGap * 3) / 2;
+    var top = rowGap * 0.6;
+    var steps1 = ["logits (fp16, autocast)", "sigmoid(logits) → p≈0", "log(p) → −∞ / NaN"];
+    steps1.forEach(function (l, i) {
+      var x = margin + i * (boxW + gap);
+      box(s, x, top, boxW, boxH, l, null, cssVar("--status-critical"), cssVar("--status-critical-soft"));
+      if (i < n - 1) el("line", { x1: x + boxW, y1: top + boxH / 2, x2: x + boxW + gap, y2: top + boxH / 2, stroke: cssVar("--border-strong"), "stroke-width": 1.4, "marker-end": "url(#arrow-nan1)" }, s);
+    });
+    text(s, margin, top + boxH + rowGap * 0.6, "✗ sin fix → val_loss = NaN en todo el entrenamiento", { "font-size": "11", fill: cssVar("--status-critical"), "font-weight": "600" });
+    var top2 = top + boxH + rowGap * 1.35;
+    var steps2 = ["logits.float() ANTES de sigmoid", "log(p) en fp32, precisión completa", "loss finita ✓"];
+    steps2.forEach(function (l, i) {
+      var x = margin + i * (boxW + gap);
+      box(s, x, top2, boxW, boxH, l, null, cssVar("--status-good"), cssVar("--status-good-soft"));
+      if (i < n - 1) el("line", { x1: x + boxW, y1: top2 + boxH / 2, x2: x + boxW + gap, y2: top2 + boxH / 2, stroke: cssVar("--border-strong"), "stroke-width": 1.4, "marker-end": "url(#arrow-nan2)" }, s);
+    });
+    text(s, margin, top2 + boxH + rowGap * 0.6, "✓ con fix → val_loss = 0.14 (finito), verificado", { "font-size": "11", fill: cssVar("--status-good"), "font-weight": "600" });
+  }
+
+  /* ---- Ablation early-stop bug: two timelines (slide 10) ---- */
+  function renderAblationBug(container) {
+    var wh = measure(container, 1190, 170); var w = wh[0], h = wh[1];
+    var s = svgRoot(container, w, h);
+    var left = w * 0.115, right = w - 30, plotW = right - left, maxEp = 50;
+    function xFor(ep) { return left + (ep / maxEp) * plotW; }
+    var gridTop = h * 0.2, gridBot = h * 0.85;
+    [0, 10, 20, 30, 40, 50].forEach(function (ep) {
+      var x = xFor(ep);
+      el("line", { x1: x, y1: gridTop, x2: x, y2: gridBot, stroke: cssVar("--chart-grid"), "stroke-width": 1 }, s);
+      text(s, x, h - 6, "ép." + ep, { "text-anchor": "middle", "font-size": "9.5" });
+    });
+    var y1 = h * 0.36;
+    text(s, 6, y1 + 5, "con_SE", { "font-size": "11", class: "lbl" });
+    el("rect", { x: left, y: y1 - 9, width: xFor(24) - left, height: 18, rx: 6, fill: cssVar("--status-critical-soft"), stroke: cssVar("--status-critical"), "stroke-width": 1.2 }, s);
+    el("circle", { cx: xFor(24), cy: y1, r: 4, fill: cssVar("--status-critical") }, s);
+    text(s, xFor(24) + 8, y1 + 4, "detenido ép.24", { "font-size": "10", fill: cssVar("--status-critical"), "font-weight": "600" });
+    var y2 = h * 0.64;
+    text(s, 6, y2 + 5, "sin_SE", { "font-size": "11", class: "lbl" });
+    el("rect", { x: left, y: y2 - 9, width: xFor(49) - left, height: 18, rx: 6, fill: cssVar("--accent-blue-soft"), stroke: cssVar("--accent-blue"), "stroke-width": 1.2 }, s);
+    el("circle", { cx: xFor(49), cy: y2, r: 4, fill: cssVar("--accent-blue") }, s);
+    text(s, xFor(49) - 10, y2 - 12, "continúa hasta ép.49", { "text-anchor": "end", "font-size": "10", fill: cssVar("--accent-blue"), "font-weight": "600" });
+    text(s, w / 2, 15, "Épocas realmente entrenadas por variante (antes del fix)", { "text-anchor": "middle", "font-size": "10.5", fill: cssVar("--text-secondary") });
+  }
+
+  /* ---- Params bar chart (slide 11) ---- */
+  function renderParamsChart(container) {
+    var wh = measure(container, 460, 180); var w = wh[0], h = wh[1];
+    var s = svgRoot(container, w, h);
+    var data = [
+      { l: "Código original", v: 15.2, color: cssVar("--status-critical") },
+      { l: "Nuestro (Tabla C1)", v: 53.1, color: cssVar("--accent-aqua") }
+    ];
+    var left = w * 0.28, plotW = w - left - 66, maxV = 60, top = h * 0.13;
+    text(s, left, top - 4, "Parámetros del modelo (millones)", { class: "lbl", "font-size": "12.5" });
+    var rowH = (h - top - 30) / 2;
+    var barH = Math.min(84, rowH * 0.6);
+    var barYs = [];
+    data.forEach(function (d, i) {
+      var y = top + 14 + i * rowH + (rowH - barH) / 2;
+      barYs.push(y);
+      var barW = (d.v / maxV) * plotW;
+      el("rect", { x: left, y: y, width: plotW, height: barH, rx: 8, fill: cssVar("--surface-sunken") }, s);
+      var r = el("rect", { x: left, y: y, width: barW, height: barH, rx: 8, fill: d.color }, s);
+      text(s, left - 10, y + barH * 0.62, d.l, { "text-anchor": "end", "font-size": "12", class: "lbl" });
+      text(s, left + barW + 12, y + barH * 0.62, d.v.toFixed(1) + "M", { "font-size": "14", fill: d.color, "font-weight": "700" });
+      titleTip(r, d.l + ": " + d.v + "M parámetros");
+    });
+    var midY = (barYs[0] + barH + barYs[1]) / 2 + 4;
+    text(s, left + plotW / 2, midY, "×3.5 más parámetros", { "text-anchor": "middle", "font-size": "12", fill: cssVar("--text-muted"), "font-style": "italic" });
+    text(s, left, h - 10, "Tabla C1 especifica ~53M (TResNet-L)", { "font-size": "11", fill: cssVar("--text-muted") });
+  }
+
+  /* ---- Dataset imbalance chart (slide 12) ---- */
+  function renderImbalanceChart(container) {
+    var wh = measure(container, 1190, 200); var w = wh[0], h = wh[1];
+    var s = svgRoot(container, w, h);
+    var data = [
+      { l: "SPHSUR", v: 13258, color: cssVar("--accent-blue") },
+      { l: "…36 especies intermedias…", v: null },
+      { l: "RHIORN", v: 17, color: cssVar("--accent-orange") },
+      { l: "RHISCI", v: 9, color: cssVar("--accent-orange") },
+      { l: "LEPFLA", v: 6, color: cssVar("--accent-orange") },
+      { l: "SCIFUS", v: 0, color: cssVar("--status-critical") },
+      { l: "SCINAS", v: 0, color: cssVar("--status-critical") }
+    ];
+    var left = w * 0.175, plotW = w - left - 40, top = h * 0.12;
+    text(s, left, top - 4, "Positivos por clase — extremos de la distribución (escala logarítmica)", { class: "lbl", "font-size": "11" });
+    var rowH = (h - top - 6) / data.length;
+    var maxLog = Math.log10(13258 + 1);
+    data.forEach(function (d, i) {
+      var y = top + 4 + i * rowH;
+      text(s, left - 10, y + rowH * 0.6, d.l, { "text-anchor": "end", "font-size": "10.5", class: d.v === null ? "" : "lbl", fill: d.v === null ? cssVar("--text-muted") : null, "font-style": d.v === null ? "italic" : "normal" });
+      if (d.v === null) { text(s, left + 10, y + rowH * 0.6, "· · ·", { "font-size": "12", fill: cssVar("--text-muted") }); return; }
+      var frac = Math.log10(d.v + 1) / maxLog;
+      var bw = Math.max(frac * plotW, 4);
+      var bh = Math.min(30, rowH * 0.68);
+      var r = el("rect", { x: left, y: y, width: bw, height: bh, rx: 4, fill: d.color }, s);
+      titleTip(r, d.l + ": " + d.v + " positivos");
+      text(s, left + bw + 8, y + bh * 0.78, d.v, { "font-size": "10.5", fill: d.color, "font-weight": "600" });
+    });
+  }
+
+  /* ---- UABOS / MSW flow diagrams (slide 7) ---- */
+  function renderUabos(container) {
+    renderFlow(container, {
+      w: 380, h: 300, dir: "v", title: "UABOS", boxWFrac: 0.94,
+      steps: [
+        { l: "Label powerset (2⁴² combos)", c: "blue" },
+        { l: "PCA(50) → t-SNE 2D", c: "blue" },
+        { l: "kNN por muestra minoritaria", c: "aqua" },
+        { l: "uᵢ = % vecinos ≠ etiqueta (Ec.11)", c: "aqua" },
+        { l: "safe (u<0.5) / dangerous (u≥0.5)", c: "orange" },
+        { l: "clonar n·γᵢ dangerous (Ec.13)", c: "orange" }
+      ]
+    });
+  }
+  function renderMsw(container) {
+    renderFlow(container, {
+      w: 380, h: 300, dir: "v", title: "MSW", boxWFrac: 0.94, gapFrac: 0.3,
+      steps: [
+        { l: "Contar positivos por clase", c: "blue" },
+        { l: "N̄ = promedio de clases", c: "aqua" },
+        { l: "wᵢ = clip(round(N̄/Nᵢ), 2, 8)", c: "orange" },
+        { l: "duplicar muestra × max(wᵢ)", c: "orange" }
+      ]
+    });
+  }
+
+  /* ---- Pipeline diagram (slide 14) ---- */
+  function renderPipeline(container) {
+    var wh = measure(container, 1190, 110); var w = wh[0], h = wh[1];
+    var s = svgRoot(container, w, h);
+    arrowMarker(s, "arrow-pipe");
+    var stages = [
+      { l: "1. experiments.py", d: "10 arms × 80 ép." },
+      { l: "2. mtd_synth.py", d: "análogo TIR" },
+      { l: "3. cross_site.py", d: "4 sitios × 80 ép." },
+      { l: "4. predict.py", d: "31 187 clips test/" },
+      { l: "5. analyze_results.py", d: "reportes + gráficos" }
+    ];
+    var n = stages.length, margin = 6, gapFrac = 0.12;
+    var unit = (w - margin * 2) / (n + (n - 1) * gapFrac);
+    var boxW = unit, gap = unit * gapFrac;
+    var top = h * 0.12, boxH = h * 0.76;
+    stages.forEach(function (st, i) {
+      var x = margin + i * (boxW + gap);
+      var color = i === 2 ? cssVar("--accent-orange") : cssVar("--accent-blue");
+      var soft = i === 2 ? cssVar("--accent-orange-soft") : cssVar("--accent-blue-soft");
+      el("rect", { x: x, y: top, width: boxW, height: boxH, rx: 9, fill: soft, stroke: color, "stroke-width": i === 2 ? 1.6 : 1 }, s);
+      text(s, x + boxW * 0.08, top + boxH * 0.42, st.l, { class: "lbl", "font-size": "11.5" });
+      text(s, x + boxW * 0.08, top + boxH * 0.74, st.d, { "font-size": "10", fill: cssVar("--text-secondary") });
+      if (i < n - 1) el("line", { x1: x + boxW, y1: top + boxH / 2, x2: x + boxW + gap, y2: top + boxH / 2, stroke: cssVar("--border-strong"), "stroke-width": 1.5, "marker-end": "url(#arrow-pipe)" }, s);
+    });
+  }
+
+  /* ---- Diverging bar chart (ablation / resampling): rows and bars are ----
+     sized from the measured container height so they always fill it ---- */
+  function renderDiverging(container, opts) {
+    var wh = measure(container, 480, 260); var w = wh[0], h = wh[1];
+    var s = svgRoot(container, w, h);
+    var titleH = opts.title ? 18 : 4;
+    var left = 10, right = w - 10, centerX = left + (right - left) * 0.6;
+    var halfW = Math.min(centerX - left - 58, right - centerX - 66);
+    var scale = halfW / opts.domain;
+    if (opts.title) text(s, left, 13, opts.title, { class: "lbl", "font-size": "11" });
+    el("line", { x1: centerX, y1: titleH, x2: centerX, y2: h - 4, stroke: cssVar("--border-strong"), "stroke-width": 1 }, s);
+    var rows = opts.rows, n = rows.length;
+    var rowH = (h - titleH - 4) / n;
+    rows.forEach(function (row, ri) {
+      var rowTop = titleH + ri * rowH;
+      text(s, left, rowTop + 13, row.label, { class: "lbl", "font-size": "10.5" });
+      var bars = row.bars, bn = bars.length;
+      var barH = (rowH - 18) / (bn * 1.35);
+      var barGap = barH * 0.35;
+      bars.forEach(function (b, bi) {
+        var y = rowTop + 16 + bi * (barH + barGap);
+        var bw = Math.abs(b.value) * scale;
+        var x = b.value >= 0 ? centerX : centerX - bw;
+        var color = b.value >= 0 ? cssVar("--status-good") : cssVar("--status-critical");
+        var r = el("rect", { x: x, y: y, width: bw, height: barH, rx: Math.min(barH / 2.4, 6), fill: color }, s);
+        titleTip(r, b.name + ": " + (b.value >= 0 ? "+" : "") + b.value.toFixed(2));
+        var lx = b.value >= 0 ? x + bw + 5 : x - 5;
+        var anchor = b.value >= 0 ? "start" : "end";
+        text(s, lx, y + barH - 1, (b.value >= 0 ? "+" : "") + b.value.toFixed(2), { "text-anchor": anchor, "font-size": Math.min(9.5, barH * 0.85), fill: color, "font-weight": "600" });
+        var nlx = b.value >= 0 ? centerX - 5 : centerX + 5;
+        var nanchor = b.value >= 0 ? "end" : "start";
+        text(s, nlx, y + barH - 1, b.name, { "text-anchor": nanchor, "font-size": Math.min(9, barH * 0.8), fill: cssVar("--text-muted") });
+      });
+    });
+  }
+
+  /* ---- MTD synthetic mixing diagram (slide 18) ---- */
+  function renderMtdMix(container) {
+    var wh = measure(container, 380, 300); var w = wh[0], h = wh[1];
+    var s = svgRoot(container, w, h);
+    arrowMarker(s, "arrow-mtd");
+    var boxW = w * 0.42, boxH = h * 0.15, topY = h * 0.05;
+    box(s, w * 0.05, topY, boxW, boxH, "Clip 1 especie", "aislado (n=12 886)", cssVar("--accent-blue"), cssVar("--accent-blue-soft"));
+    box(s, w * 0.53, topY, boxW, boxH, "Clip vacío", "ruido de sitio (n=22 504)", cssVar("--text-muted"), cssVar("--surface-sunken"));
+    var plusY = topY + boxH + h * 0.09;
+    el("circle", { cx: w / 2, cy: plusY, r: h * 0.045, fill: "none", stroke: cssVar("--text-secondary"), "stroke-width": 1.4 }, s);
+    text(s, w / 2, plusY + 5, "+", { "text-anchor": "middle", "font-size": "16", fill: cssVar("--text-secondary"), "font-weight": "700" });
+    el("line", { x1: w * 0.26, y1: topY + boxH, x2: w / 2 - h * 0.03, y2: plusY - h * 0.02, stroke: cssVar("--border-strong"), "stroke-width": 1.3, "marker-end": "url(#arrow-mtd)" }, s);
+    el("line", { x1: w * 0.74, y1: topY + boxH, x2: w / 2 + h * 0.03, y2: plusY - h * 0.02, stroke: cssVar("--border-strong"), "stroke-width": 1.3, "marker-end": "url(#arrow-mtd)" }, s);
+    var box2Y = plusY + h * 0.09, box2H = boxH * 0.85;
+    box(s, w / 2 - boxW * 0.6, box2Y, boxW * 1.2, box2H, "escalar ruido a TIR objetivo (dB)", null, cssVar("--accent-orange"), cssVar("--accent-orange-soft"));
+    el("line", { x1: w / 2, y1: plusY + h * 0.045, x2: w / 2, y2: box2Y, stroke: cssVar("--border-strong"), "stroke-width": 1.3, "marker-end": "url(#arrow-mtd)" }, s);
+    var box3Y = box2Y + box2H + h * 0.09;
+    box(s, w / 2 - boxW * 0.6, box3Y, boxW * 1.2, boxH, "clip sintético", "TIR conocido: −20 a +20 dB", cssVar("--accent-aqua"), cssVar("--accent-aqua-soft"));
+    el("line", { x1: w / 2, y1: box2Y + box2H, x2: w / 2, y2: box3Y, stroke: cssVar("--border-strong"), "stroke-width": 1.3, "marker-end": "url(#arrow-mtd)" }, s);
+    text(s, w / 2, h - 22, "evaluado con el checkpoint ya entrenado", { "text-anchor": "middle", "font-size": "10", fill: cssVar("--text-muted") });
+    text(s, w / 2, h - 8, "(inferencia pura, sin reentrenar)", { "text-anchor": "middle", "font-size": "10", fill: cssVar("--text-muted") });
+  }
+
+  /* ---- Leave-one-site-out schematic (slide 19) ---- */
+  function renderLeaveOneOut(container) {
+    var wh = measure(container, 1190, 128); var w = wh[0], h = wh[1];
+    var s = svgRoot(container, w, h);
+    var sites = ["INCT20955", "INCT4", "INCT41", "INCT17"];
+    var left = w * 0.145, rowH = h / 4, chipGap = w * 0.012;
+    var chipW = (w - left - 10 - chipGap * 3) / 4;
+    var chipH = Math.min(28, rowH * 0.62);
+    sites.forEach(function (heldOut, ri) {
+      var y = ri * rowH + (rowH - chipH) / 2;
+      text(s, left - 10, y + chipH * 0.65, heldOut, { "text-anchor": "end", "font-size": "10.5", class: "lbl" });
+      sites.forEach(function (s2, ci) {
+        var x = left + ci * (chipW + chipGap);
+        var isTest = s2 === heldOut;
+        var color = isTest ? cssVar("--accent-orange") : cssVar("--accent-blue");
+        var soft = isTest ? cssVar("--accent-orange-soft") : cssVar("--accent-blue-soft");
+        el("rect", { x: x, y: y, width: chipW, height: chipH, rx: 6, fill: soft, stroke: color, "stroke-width": isTest ? 1.6 : 1 }, s);
+        text(s, x + chipW / 2, y + chipH / 2 + 4, s2 + (isTest ? " · test" : " · train"), { "text-anchor": "middle", "font-size": "9.5", fill: color, "font-weight": isTest ? "700" : "500" });
+      });
+    });
+  }
+
+  /* ---- Line chart ---- */
+  function renderLineChart(container, opts) {
+    var wh = measure(container, opts.w || 480, opts.h || 220);
+    var w = wh[0], h = wh[1];
+    var padL = 34, padR = 14, padT = 18, padB = 26;
+    var plotW = w - padL - padR, plotH = h - padT - padB;
+    var s = svgRoot(container, w, h);
+    var n = opts.xLabels.length;
+    var xStep = n > 1 ? plotW / (n - 1) : 0;
+    function xPos(i) { return padL + i * xStep; }
+    function yPos(v) { return padT + plotH - ((v - opts.yDomain[0]) / (opts.yDomain[1] - opts.yDomain[0])) * plotH; }
+    var gridN = 4;
+    for (var g = 0; g <= gridN; g++) {
+      var gv = opts.yDomain[0] + (g / gridN) * (opts.yDomain[1] - opts.yDomain[0]);
+      var gy = yPos(gv);
+      el("line", { x1: padL, y1: gy, x2: w - padR, y2: gy, stroke: cssVar("--chart-grid"), "stroke-width": 1 }, s);
+      text(s, padL - 6, gy + 3, Math.round(gv), { "text-anchor": "end", "font-size": "9" });
+    }
+    opts.xLabels.forEach(function (lb, i) {
+      if (opts.skipLabel && (i % opts.skipLabel !== 0) && i !== n - 1) return;
+      text(s, xPos(i), h - padB + 13, lb, { "text-anchor": "middle", "font-size": "9" });
+    });
+    if (opts.refLine) {
+      var ry = yPos(opts.refLine.value);
+      el("line", { x1: padL, y1: ry, x2: w - padR, y2: ry, stroke: cssVar("--accent-orange"), "stroke-width": 1.2, "stroke-dasharray": "4 3" }, s);
+      text(s, w - padR, ry - 4, opts.refLine.label, { "text-anchor": "end", "font-size": "9", fill: cssVar("--accent-orange"), "font-weight": "600" });
+    }
+    opts.series.forEach(function (ser) {
+      var d = ser.values.map(function (v, i) { return (i === 0 ? "M" : "L") + xPos(i).toFixed(1) + "," + yPos(v).toFixed(1); }).join(" ");
+      el("path", { d: d, fill: "none", stroke: ser.color, "stroke-width": 2, "stroke-linejoin": "round" }, s);
+      ser.values.forEach(function (v, i) {
+        if (opts.dotsEvery && i % opts.dotsEvery !== 0 && i !== ser.values.length - 1) return;
+        var c = el("circle", { cx: xPos(i), cy: yPos(v), r: 2.6, fill: ser.color, stroke: cssVar("--surface"), "stroke-width": 1 }, s);
+        titleTip(c, ser.name + " · " + opts.xLabels[i] + ": " + v.toFixed(1));
+      });
+      var last = ser.values.length - 1;
+      text(s, xPos(last) - 4, yPos(ser.values[last]) - 7, ser.values[last].toFixed(1), { "text-anchor": "end", "font-size": "9.5", fill: ser.color, "font-weight": "600" });
+    });
+    if (opts.markers) {
+      opts.markers.forEach(function (m) {
+        var mx = xPos(m.i), my = yPos(m.v);
+        el("circle", { cx: mx, cy: my, r: 4.5, fill: "none", stroke: cssVar("--text-primary"), "stroke-width": 1.3 }, s);
+        text(s, mx, my - 9, m.label, { "text-anchor": "middle", "font-size": "9", "font-weight": "700", fill: cssVar("--text-primary") });
+      });
+    }
+    if (opts.legend) {
+      var lx = padL, ly = padT - 8;
+      opts.series.forEach(function (ser, i) {
+        el("rect", { x: lx + i * 100, y: ly - 7, width: 8, height: 8, rx: 2, fill: ser.color }, s);
+        text(s, lx + i * 100 + 12, ly, ser.name, { "font-size": "9.5", fill: cssVar("--text-secondary") });
+      });
+    }
+  }
+
+  /* ---- Ordinal bars (k sweep) ---- */
+  function renderOrdinalBars(container, opts) {
+    var wh = measure(container, opts.w || 220, opts.h || 220);
+    var w = wh[0], h = wh[1];
+    var padL = 28, padR = 10, padT = 18, padB = 24;
+    var plotW = w - padL - padR, plotH = h - padT - padB;
+    var s = svgRoot(container, w, h);
+    var n = opts.items.length;
+    var gapFrac = 0.42;
+    var barW = plotW / (n + (n - 1) * gapFrac);
+    var gap = barW * gapFrac;
+    var maxV = opts.max;
+    if (opts.title) text(s, padL, 12, opts.title, { class: "lbl", "font-size": "10.5" });
+    opts.items.forEach(function (it, i) {
+      var x = padL + i * (barW + gap);
+      var bh = (it.value / maxV) * plotH;
+      var y = padT + plotH - bh;
+      var r = el("rect", { x: x, y: y, width: barW, height: bh, rx: 5, fill: opts.color }, s);
+      titleTip(r, it.label + ": " + it.value.toFixed(1));
+      text(s, x + barW / 2, y - 5, it.value.toFixed(1), { "text-anchor": "middle", "font-size": "10", "font-weight": "600", fill: opts.color });
+      text(s, x + barW / 2, h - padB + 13, it.label, { "text-anchor": "middle", "font-size": "9.5" });
+    });
+    el("line", { x1: padL, y1: padT + plotH, x2: w - padR, y2: padT + plotH, stroke: cssVar("--border-strong"), "stroke-width": 1 }, s);
+  }
+
+  /* ---- Grouped bars (cross-site) ---- */
+  function renderGroupedBars(container, opts) {
+    var wh = measure(container, opts.w || 900, opts.h || 260);
+    var w = wh[0], h = wh[1];
+    var padL = 40, padR = 20, padT = 26, padB = 28;
+    var plotW = w - padL - padR, plotH = h - padT - padB;
+    var s = svgRoot(container, w, h);
+    var n = opts.groups.length;
+    var groupW = plotW / n;
+    var barGap = groupW * 0.055;
+    var barW = (groupW * 0.6 - barGap) / 2;
+    var maxV = opts.max;
+    function yFor(v) { return padT + plotH - (v / maxV) * plotH; }
+    [0, 25, 50, 75, 100].forEach(function (gv) {
+      var gy = yFor(gv);
+      el("line", { x1: padL, y1: gy, x2: w - padR, y2: gy, stroke: cssVar("--chart-grid"), "stroke-width": 1 }, s);
+      text(s, padL - 8, gy + 3, gv, { "text-anchor": "end", "font-size": "9.5" });
+    });
+    var lx = padL, ly = 14;
+    [{ c: opts.colorA, l: opts.legendA }, { c: opts.colorB, l: opts.legendB }].forEach(function (leg, i) {
+      el("rect", { x: lx + i * 200, y: ly - 8, width: 9, height: 9, rx: 2, fill: leg.c }, s);
+      text(s, lx + i * 200 + 13, ly, leg.l, { "font-size": "10", fill: cssVar("--text-secondary") });
+    });
+    opts.groups.forEach(function (g, i) {
+      var gx = padL + i * groupW + groupW / 2 - (barW * 2 + barGap) / 2;
+      [{ v: g.a, color: opts.colorA }, { v: g.b, color: opts.colorB }].forEach(function (bar, bi) {
+        var x = gx + bi * (barW + barGap);
+        var y = yFor(bar.v);
+        var bh = padT + plotH - y;
+        var r = el("rect", { x: x, y: y, width: barW, height: bh, rx: 4, fill: bar.color }, s);
+        titleTip(r, g.label + ": " + bar.v.toFixed(1));
+        text(s, x + barW / 2, y - 5, bar.v.toFixed(1), { "text-anchor": "middle", "font-size": "10.5", "font-weight": "600", fill: bar.color });
+      });
+      text(s, padL + i * groupW + groupW / 2, h - padB + 16, g.label, { "text-anchor": "middle", "font-size": "11", class: "lbl" });
+    });
+  }
+
+  /* ================= DATA + RENDER CALLS ================= */
+  function renderAll() {
+    renderTirDiagram(document.getElementById("tirDiagram"));
+    renderMelPipeline(document.getElementById("melPipeline"));
+    renderArchDiagram(document.getElementById("archDiagram"));
+    renderResidualBlock(document.getElementById("basicBlockDiagram"), {
+      title: "BasicBlockSE",
+      steps: [{ l: "Conv 3×3 + IBN/LeakyReLU" }, { l: "Conv 3×3 + IBN" }, { l: "SE (r=4)", se: true }]
+    });
+    renderResidualBlock(document.getElementById("bottleneckBlockDiagram"), {
+      title: "BottleneckBlockSE",
+      steps: [{ l: "Conv 1×1 + IBN/LeakyReLU" }, { l: "Conv 3×3 + IBN/LeakyReLU" }, { l: "SE (r=8)", se: true }, { l: "Conv 1×1 + IBN (expansión)" }]
+    });
+    renderUabos(document.getElementById("uabosDiagram"));
+    renderMsw(document.getElementById("mswDiagram"));
+    renderNanBug(document.getElementById("nanBugDiagram"));
+    renderAblationBug(document.getElementById("ablationBugDiagram"));
+    renderParamsChart(document.getElementById("paramsChart"));
+    renderImbalanceChart(document.getElementById("imbalanceChart"));
+    renderPipeline(document.getElementById("pipelineDiagram"));
+    renderMtdMix(document.getElementById("mtdMixDiagram"));
+    renderLeaveOneOut(document.getElementById("leaveOneOutDiagram"));
+
+    renderDiverging(document.getElementById("ablationChart"), {
+      title: "Δ por activar SE (mismo split/semilla)",
+      domain: 1.7, barH: 9, bars_per_row: 3,
+      rows: [
+        { label: "TResNet-L → LA", bars: [{ name: "Δacc", value: 0.74 }, { name: "ΔF1", value: 1.44 }, { name: "ΔmAP", value: 0.07 }] },
+        { label: "ResNet50 → -A", bars: [{ name: "Δacc", value: -0.44 }, { name: "ΔF1", value: -0.07 }, { name: "ΔmAP", value: -0.07 }] },
+        { label: "TResNet-M → -MA", bars: [{ name: "Δacc", value: 0.01 }, { name: "ΔF1", value: -0.81 }, { name: "ΔmAP", value: -0.11 }] }
+      ]
+    });
+
+    renderDiverging(document.getElementById("resamplingChart"), {
+      title: "Δ global_acc por resampling (vs. sin resample)",
+      domain: 2.4, barH: 10, bars_per_row: 2,
+      rows: [
+        { label: "TResNet-LA + MSW", bars: [{ name: "Δacc", value: -1.86 }, { name: "ΔF1", value: -0.55 }] },
+        { label: "TResNet-LA + UABOS", bars: [{ name: "Δacc", value: -1.87 }, { name: "ΔF1", value: -1.24 }] },
+        { label: "TResNet-L + MSW", bars: [{ name: "Δacc", value: 0.98 }, { name: "ΔF1", value: 2.93 }] },
+        { label: "TResNet-L + UABOS", bars: [{ name: "Δacc", value: -2.02 }, { name: "ΔF1", value: -0.48 }] }
+      ]
+    });
+
+    renderLineChart(document.getElementById("tirChart"), {
+      w: 340, h: 190, title: "Exact-match / micro-F1 vs. TIR", legend: true,
+      xLabels: ["-20", "-10", "-5", "0", "5", "10", "20"],
+      yDomain: [0, 55],
+      series: [
+        { name: "exact-match", color: cssVar("--accent-blue"), values: [0.0, 1.7, 8.9, 11.7, 24.4, 22.8, 32.8] },
+        { name: "micro-F1", color: cssVar("--accent-orange"), values: [0.5, 4.7, 15.2, 26.5, 38.7, 43.6, 50.3] }
+      ]
+    });
+
+    renderOrdinalBars(document.getElementById("kChart"), {
+      w: 260, h: 190, color: cssVar("--accent-aqua"), max: 65, title: "micro-F1 vs. k especies mezcladas",
+      items: [{ label: "k=1", value: 58.0 }, { label: "k=2", value: 27.3 }, { label: "k=3", value: 15.3 }]
+    });
+
+    renderGroupedBars(document.getElementById("crossSiteChart"), {
+      w: 1080, h: 210, max: 100,
+      colorA: cssVar("--accent-blue"), colorB: cssVar("--accent-orange"),
+      legendA: "dominio conocido (val)", legendB: "sitio nunca visto (test)",
+      groups: [
+        { label: "INCT20955", a: 95.92, b: 26.92 },
+        { label: "INCT4", a: 97.86, b: 8.91 },
+        { label: "INCT41", a: 97.83, b: 15.32 },
+        { label: "INCT17", a: 97.26, b: 18.66 }
+      ]
+    });
+
+    renderLineChart(document.getElementById("thresholdChart"), {
+      w: 460, h: 210, yDomain: [30, 92],
+      xLabels: ["0.05", "0.10", "0.15", "0.20", "0.25", "0.30", "0.35", "0.40", "0.45", "0.50", "0.55", "0.60", "0.65", "0.70", "0.75", "0.80", "0.85", "0.90", "0.95"],
+      skipLabel: 3,
+      series: [{ name: "macro-F1", color: cssVar("--accent-blue"), values: [35.85, 43.71, 47.46, 50.22, 53.71, 56.31, 57.26, 60.72, 65.65, 74.53, 81.50, 84.97, 87.70, 86.47, 86.48, 87.34, 87.36, 87.44, 87.20] }],
+      refLine: { value: 90.9, label: "umbral por clase: 90.9" },
+      dotsEvery: 3,
+      markers: [{ i: 12, v: 87.70, label: "óptimo 0.65" }, { i: 15, v: 87.34, label: "usado 0.80" }]
+    });
+
+    var armsData = [
+      ["TResNet-LA", "—", "53.1M", 90.28, 87.34, 97.15, 50, true],
+      ["TResNet-L", "—", "51.8M", 89.54, 85.90, 97.08, 30, false],
+      ["TResNet-LA", "MSW", "53.1M", 88.42, 86.79, 96.53, 24, false],
+      ["TResNet-LA", "UABOS", "53.1M", 88.41, 86.10, 96.21, 32, false],
+      ["ResNet50", "—", "23.6M", 89.93, 89.23, 96.62, 70, false],
+      ["ResNet50-A", "—", "24.3M", 89.49, 89.16, 96.55, 48, false],
+      ["TResNet-M", "—", "40.3M", 90.26, 89.26, 96.61, 47, false],
+      ["TResNet-MA", "—", "41.3M", 90.27, 88.45, 96.50, 37, false],
+      ["TResNet-L", "MSW", "51.8M", 90.52, 88.83, 96.68, 41, false],
+      ["TResNet-L", "UABOS", "51.8M", 87.52, 85.42, 96.40, 24, false]
+    ];
+    var maxAcc = Math.max.apply(null, armsData.map(function (r) { return r[3]; }));
+    var maxF1 = Math.max.apply(null, armsData.map(function (r) { return r[4]; }));
+    var maxMap = Math.max.apply(null, armsData.map(function (r) { return r[5]; }));
+    var tbody = document.querySelector("#armsTable tbody");
+    tbody.innerHTML = "";
+    armsData.forEach(function (r) {
+      var tr = document.createElement("tr");
+      if (r[7]) tr.className = "hi";
+      tr.innerHTML =
+        '<td class="txt">' + r[0] + '</td>' +
+        '<td class="txt">' + r[1] + '</td>' +
+        '<td>' + r[2] + '</td>' +
+        '<td' + (r[3] === maxAcc ? ' class="best"' : '') + '>' + r[3].toFixed(2) + '</td>' +
+        '<td' + (r[4] === maxF1 ? ' class="best"' : '') + '>' + r[4].toFixed(2) + '</td>' +
+        '<td' + (r[5] === maxMap ? ' class="best"' : '') + '>' + r[5].toFixed(2) + '</td>' +
+        '<td>' + r[6] + '</td>';
+      tbody.appendChild(tr);
+    });
+
+    renderArmsChart(document.getElementById("armsChart"), armsData, maxMap);
+  }
+
+  /* ---- mAP by arm, horizontal bars (slide 15) ---- */
+  function renderArmsChart(container, armsData, maxMap) {
+    var wh = measure(container, 1190, 220); var w = wh[0], h = wh[1];
+    var s = svgRoot(container, w, h);
+    var n = armsData.length;
+    var left = w * 0.19, right = w - 60, plotW = right - left;
+    var top = 8, rowH = (h - top - 4) / n;
+    var barH = Math.min(24, rowH * 0.6);
+    var domainMin = 95.5, domainMax = Math.ceil(maxMap * 10) / 10 + 0.2;
+    text(s, left, top + 2, "mAP por arm (dominio recortado 95.5-" + domainMax.toFixed(1) + " para resaltar diferencias)", { class: "lbl", "font-size": "11" });
+    armsData.forEach(function (r, i) {
+      var y = top + 16 + i * rowH + (rowH - barH) / 2 - 6;
+      var name = r[0] + (r[1] !== "—" ? " +" + r[1] : "");
+      var isTresnet = r[0].indexOf("TResNet") === 0;
+      var color = r[7] ? cssVar("--accent-aqua") : (isTresnet ? cssVar("--accent-blue") : cssVar("--accent-orange"));
+      var frac = Math.max(0, (r[5] - domainMin) / (domainMax - domainMin));
+      var bw = frac * plotW;
+      text(s, left - 8, y + barH * 0.72, name, { "text-anchor": "end", "font-size": "10", class: r[7] ? "lbl" : "" });
+      el("rect", { x: left, y: y, width: plotW, height: barH, rx: 4, fill: cssVar("--surface-sunken") }, s);
+      var rc = el("rect", { x: left, y: y, width: bw, height: barH, rx: 4, fill: color }, s);
+      titleTip(rc, name + ": mAP " + r[5].toFixed(2));
+      text(s, left + bw + 6, y + barH * 0.72, r[5].toFixed(2), { "font-size": "10", fill: color, "font-weight": "600" });
+    });
+  }
+
+  /* ================= FIT-TO-VIEWPORT SCALING ================= */
+  var deckWrap = document.querySelector(".deck-wrap");
+  var scaler = document.getElementById("scaler");
+  function fitScale() {
+    var availW = deckWrap.clientWidth;
+    var availH = deckWrap.clientHeight;
+    var s = Math.min(availW / 1280, availH / 720);
+    scaler.style.transform = "scale(" + s + ")";
+  }
+
+  /* ================= DECK NAVIGATION ================= */
+  var slides = Array.prototype.slice.call(document.querySelectorAll(".slide"));
+  var dotsWrap = document.getElementById("dots");
+  var counter = document.getElementById("counter");
+  var prevBtn = document.getElementById("prevBtn");
+  var nextBtn = document.getElementById("nextBtn");
+  var idx = 0;
+
+  slides.forEach(function (_, i) {
+    var d = document.createElement("button");
+    d.className = "dot";
+    d.setAttribute("role", "tab");
+    d.setAttribute("aria-label", "Diapositiva " + (i + 1));
+    d.addEventListener("click", function () { goTo(i); });
+    dotsWrap.appendChild(d);
+  });
+  var dots = Array.prototype.slice.call(dotsWrap.children);
+
+  function pad(n) { return n < 10 ? "0" + n : "" + n; }
+
+  function render() {
+    slides.forEach(function (s, i) { s.classList.toggle("is-active", i === idx); });
+    dots.forEach(function (d, i) { d.classList.toggle("is-active", i === idx); });
+    counter.textContent = pad(idx + 1) + " / " + slides.length;
+    prevBtn.disabled = idx === 0;
+    nextBtn.disabled = idx === slides.length - 1;
+    try { localStorage.setItem("tresnet-deck-slide", String(idx)); } catch (e) {}
+  }
+  function goTo(i) { idx = Math.max(0, Math.min(slides.length - 1, i)); render(); }
+
+  prevBtn.addEventListener("click", function () { goTo(idx - 1); });
+  nextBtn.addEventListener("click", function () { goTo(idx + 1); });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "ArrowRight" || e.key === "PageDown") { goTo(idx + 1); e.preventDefault(); }
+    else if (e.key === "ArrowLeft" || e.key === "PageUp") { goTo(idx - 1); e.preventDefault(); }
+    else if (e.key === "Home") { goTo(0); e.preventDefault(); }
+    else if (e.key === "End") { goTo(slides.length - 1); e.preventDefault(); }
+  });
+
+  var restored = 0;
+  try { restored = parseInt(localStorage.getItem("tresnet-deck-slide") || "0", 10) || 0; } catch (e) {}
+  idx = Math.max(0, Math.min(slides.length - 1, restored));
+
+  renderAll();
+  render();
+  fitScale();
+  window.addEventListener("resize", fitScale);
+})();
+</script>
